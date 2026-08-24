@@ -1,0 +1,112 @@
+openapi: 3.0.3
+info:
+  title: csmf.ro API
+  description: >
+    REST API surface exposed by Supabase Edge Functions
+    (`apps/supabase/functions/`). This is the only path the web app (and any
+    other client) uses to read/write the database — RLS is still the real
+    enforcement layer, but every request goes through a function, not
+    PostgREST directly. Auth is the one exception: Supabase Auth is called
+    directly from the web app (see `apps/web/lib/supabase/`), not wrapped by
+    this API.
+
+    Keep this file in sync with `apps/supabase/functions/`: whenever a
+    function route is added, removed, or changed, update this spec in the
+    same change.
+  version: "0.1.0"
+servers:
+  - url: https://{project_ref}.supabase.co/functions/v1
+    variables:
+      project_ref:
+        default: ieidicunbwtmdingurgt
+        description: Supabase project ref (dev by default).
+security:
+  - apikey: []
+tags:
+  - name: hello
+    description: >
+      Throwaway/example function proving the Edge Functions + Hono wiring,
+      and the shared request-scoped client
+      (`apps/supabase/functions/_shared/client.ts`) that forwards the
+      caller's Authorization header so RLS applies as the caller.
+paths:
+  /hello:
+    get:
+      tags: [hello]
+      summary: Health check
+      operationId: getHello
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: hello from edge functions
+  /hello/posts:
+    get:
+      tags: [hello]
+      summary: List posts, scoped to the caller (RLS demo)
+      description: >
+        Anonymous callers see only published posts; an authenticated admin
+        session sees drafts too. Demonstrates the shared scoped-client
+        pattern every future data-access route should follow.
+      operationId: getHelloPosts
+      security:
+        - apikey: []
+        - apikey: []
+          bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  posts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PostSummary"
+        "500":
+          description: Query error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  securitySchemes:
+    apikey:
+      type: apiKey
+      in: header
+      name: apikey
+      description: Supabase anon/publishable key.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >
+        End user's session access token. Forwarded by the shared client so
+        RLS evaluates as that caller instead of the function's own role.
+  schemas:
+    PostSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        slug:
+          type: string
+        status:
+          type: string
+          enum: [draft, published]
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
