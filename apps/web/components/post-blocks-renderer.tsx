@@ -1,0 +1,51 @@
+import type { Database } from "@csmf/supabase";
+
+type PostBlock = Database["public"]["Tables"]["post_blocks"]["Row"];
+
+// Reused by the admin editor's preview (Phase 05) — keep block-type
+// rendering here rather than duplicating it per page.
+export function PostBlocksRenderer({ blocks }: { blocks: PostBlock[] }) {
+  return (
+    <div className="flex flex-col gap-4">
+      {blocks.map((block) => (
+        <PostBlockView key={block.id} block={block} />
+      ))}
+    </div>
+  );
+}
+
+function PostBlockView({ block }: { block: PostBlock }) {
+  const content = block.content as Record<string, unknown>;
+
+  switch (block.type) {
+    case "heading":
+      return <h2 className="font-serif text-2xl text-ink">{String(content.text ?? "")}</h2>;
+    case "subheading":
+      return <h3 className="font-serif text-xl text-ink">{String(content.text ?? "")}</h3>;
+    case "paragraph":
+      return <p className="font-sans text-ink">{String(content.text ?? "")}</p>;
+    case "code":
+      return (
+        <pre className="overflow-x-auto rounded border border-border bg-paper-raised p-4 font-mono text-sm text-ink">
+          <code>{String(content.code ?? "")}</code>
+        </pre>
+      );
+    case "separator":
+      return <hr className="border-border" />;
+    case "image": {
+      const url = typeof content.url === "string" ? content.url : null;
+      if (!url) return null;
+      return (
+        <figure>
+          {/* eslint-disable-next-line @next/next/no-img-element -- block image URLs are arbitrary user uploads, not known at build time */}
+          <img src={url} alt={String(content.alt_text ?? "")} className="w-full rounded" />
+          {typeof content.caption === "string" && content.caption && (
+            <figcaption className="mt-1 text-sm text-ink-muted">{content.caption}</figcaption>
+          )}
+        </figure>
+      );
+    }
+    default:
+      return null;
+  }
+}

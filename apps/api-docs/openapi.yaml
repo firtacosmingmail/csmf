@@ -29,7 +29,50 @@ tags:
       and the shared request-scoped client
       (`apps/supabase/functions/_shared/client.ts`) that forwards the
       caller's Authorization header so RLS applies as the caller.
+  - name: posts
+    description: The `posts` Edge Function (`apps/supabase/functions/posts/`).
 paths:
+  /posts/{slug}:
+    get:
+      tags: [posts]
+      summary: Get a post by slug, with its ordered blocks
+      description: >
+        RLS-scoped: anonymous callers only ever get a published post (a
+        draft's slug 404s for them); an authenticated admin session can
+        fetch any post regardless of status.
+      operationId: getPostBySlug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - apikey: []
+        - apikey: []
+          bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  post:
+                    $ref: "#/components/schemas/PostWithBlocks"
+        "404":
+          description: Not found (or not visible to this caller)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Query error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /hello:
     get:
       tags: [hello]
@@ -105,6 +148,79 @@ components:
         status:
           type: string
           enum: [draft, published]
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        subtitle:
+          type: string
+          nullable: true
+        slug:
+          type: string
+        status:
+          type: string
+          enum: [draft, published]
+        pinned:
+          type: boolean
+        preview_image_url:
+          type: string
+          nullable: true
+        preview_image_alt:
+          type: string
+          nullable: true
+        preview_image_block_id:
+          type: string
+          format: uuid
+          nullable: true
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    PostBlock:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        post_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [heading, subheading, paragraph, code, separator, image]
+        display_order:
+          type: integer
+        content:
+          type: object
+          description: >
+            Shape depends on `type`: `{text}` (heading/subheading/paragraph),
+            `{code, language}`, `{url, alt_text, caption, source_text,
+            source_url}` (image), or `{}` (separator).
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    PostWithBlocks:
+      allOf:
+        - $ref: "#/components/schemas/Post"
+        - type: object
+          properties:
+            post_blocks:
+              type: array
+              items:
+                $ref: "#/components/schemas/PostBlock"
     Error:
       type: object
       properties:
