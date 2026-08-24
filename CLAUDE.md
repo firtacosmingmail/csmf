@@ -98,6 +98,10 @@ follow-up.
   `--allow-env`).
 - `pnpm test` at the repo root runs both, via turbo.
 
+After implementing a feature, run the **full** `pnpm test` at the root —
+not just the new tests — to catch regressions the change may have caused
+elsewhere, before calling the work done.
+
 ### Swagger / OpenAPI docs (`apps/api-docs`)
 
 `apps/api-docs/openapi.yaml` documents every Edge Function route.
