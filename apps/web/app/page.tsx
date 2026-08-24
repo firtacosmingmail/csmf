@@ -1,12 +1,11 @@
-import { createSupabaseClient } from "@csmf/supabase";
+import { createClient } from "@/lib/supabase/server";
 
 async function checkSupabaseConnection() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) {
+  if (!url) {
     return { ok: false, message: "Supabase env vars are not set." };
   }
-  const supabase = createSupabaseClient(url, anonKey);
+  const supabase = await createClient();
   const { error } = await supabase.auth.getSession();
   if (error) {
     return { ok: false, message: error.message };

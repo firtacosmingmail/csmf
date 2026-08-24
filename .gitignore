@@ -23,7 +23,7 @@ yarn-error.log*
 pnpm-debug.log*
 
 # supabase
-packages/supabase/.temp/
-packages/supabase/.branches/
+apps/supabase/.temp/
+apps/supabase/.branches/
 # CLI caches this relative to invocation cwd, not just the linked project dir.
 /supabase/.temp/
