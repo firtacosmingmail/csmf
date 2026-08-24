@@ -32,7 +32,87 @@ tags:
   - name: posts
     description: The `posts` Edge Function (`apps/supabase/functions/posts/`).
 paths:
-  /posts/{slug}:
+  /posts:
+    get:
+      tags: [posts]
+      summary: List posts
+      description: >
+        RLS-scoped: anonymous callers only ever see published posts,
+        regardless of `?status=`; an authenticated admin session sees
+        everything, optionally filtered by `?status=` or a single `?id=`.
+      operationId: listPosts
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, published]
+        - name: id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      security:
+        - apikey: []
+        - apikey: []
+          bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  posts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Post"
+        "500":
+          description: Query error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags: [posts]
+      summary: Create a post
+      description: >
+        Admin only — RLS rejects an anonymous caller's insert with 403. New
+        posts start with zero blocks (the block editor adds those later).
+      operationId: createPost
+      security:
+        - apikey: []
+          bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  post:
+                    $ref: "#/components/schemas/Post"
+        "400":
+          description: Missing required field, or an invalid status value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Not authorized (RLS)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /posts/{id}:
     get:
       tags: [posts]
       summary: Get a post by slug, with its ordered blocks
@@ -40,13 +120,19 @@ paths:
         RLS-scoped: anonymous callers only ever get a published post (a
         draft's slug 404s for them); an authenticated admin session can
         fetch any post regardless of status.
+
+        Note: despite the shared `{id}` path parameter name (this and the
+        PATCH/DELETE operations below all resolve to the same URL shape, so
+        OpenAPI treats them as one path), this parameter is actually the
+        post's **slug**, not its UUID id.
       operationId: getPostBySlug
       parameters:
-        - name: slug
+        - name: id
           in: path
           required: true
           schema:
             type: string
+          description: The post's slug.
       security:
         - apikey: []
         - apikey: []
@@ -69,6 +155,76 @@ paths:
                 $ref: "#/components/schemas/Error"
         "500":
           description: Query error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      tags: [posts]
+      summary: Update a post's metadata
+      description: >
+        Admin only. Accepts any subset of title/subtitle/slug/status/pinned;
+        unknown fields are ignored. `published_at` is set automatically the
+        first time status transitions to `published`.
+      operationId: updatePost
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - apikey: []
+          bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  post:
+                    $ref: "#/components/schemas/Post"
+        "400":
+          description: Invalid status value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found (or not visible to this caller — RLS)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      tags: [posts]
+      summary: Delete a post
+      description: Admin only. Cascades to the post's blocks and comments.
+      operationId: deletePost
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - apikey: []
+          bearerAuth: []
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found (or not visible to this caller — RLS)
           content:
             application/json:
               schema:
@@ -186,6 +342,24 @@ components:
         updated_at:
           type: string
           format: date-time
+    PostInput:
+      type: object
+      description: >
+        POST requires title and slug; PATCH accepts any subset of these
+        fields.
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: string
+          nullable: true
+        slug:
+          type: string
+        status:
+          type: string
+          enum: [draft, published]
+        pinned:
+          type: boolean
     PostBlock:
       type: object
       properties:

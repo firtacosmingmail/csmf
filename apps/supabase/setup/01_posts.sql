@@ -23,6 +23,28 @@ create trigger posts_set_updated_at
   for each row
   execute function set_updated_at();
 
+-- Sets published_at automatically the first time a post transitions to (or
+-- is created as) 'published', unless the caller already supplied a value.
+create or replace function set_published_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.status = 'published'
+    and new.published_at is null
+    and (tg_op = 'INSERT' or old.status is distinct from 'published')
+  then
+    new.published_at = now();
+  end if;
+  return new;
+end;
+$$;
+
+create trigger posts_set_published_at
+  before insert or update on posts
+  for each row
+  execute function set_published_at();
+
 alter table posts enable row level security;
 
 -- Public reads published posts; admin (any authenticated session, per the
