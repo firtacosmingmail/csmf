@@ -41,6 +41,7 @@ apps/
     types/database.ts      Generated types (`pnpm --filter @csmf/supabase gen-types`). This package is types-only — see Conventions.
     functions/             Edge Functions (Deno + Hono). One directory per function.
       _shared/client.ts     Request-scoped Supabase client — every function that touches the DB should use this, forwarding the caller's Authorization header.
+      _shared/http.ts        Shared pure helpers (Postgres-error → HTTP status, request-body field picking) — reusable, unit-testable logic every function's route handlers should build on.
     setup/                 Current-state SQL, NOT migration history — see below.
       storage/              Same convention, for Supabase Storage buckets.
 
@@ -58,8 +59,8 @@ Bug fixes / cleanup unrelated to a specific ticket don't need one.
 ### Coding
 
 - TypeScript strict mode everywhere; `tsc --noEmit` must pass
-  (`pnpm typecheck`), same for `pnpm lint` and `pnpm build`, before calling
-  work done.
+  (`pnpm typecheck`), same for `pnpm lint`, `pnpm build`, and `pnpm test`,
+  before calling work done.
 - Tailwind v4, tokens defined in `apps/web/app/globals.css` (`@theme`
   block): `paper` / `paper-raised` / `ink` / `ink-muted` / `border` /
   `terracotta` (+ `-hover`) for color, `font-serif` (Newsreader) /
@@ -75,6 +76,27 @@ Bug fixes / cleanup unrelated to a specific ticket don't need one.
 - New Edge Functions live in `apps/supabase/functions/<name>/`, use Hono for
   routing, and use `functions/_shared/client.ts` for any DB access (never
   the service role / a fixed anon client) so RLS applies as the caller.
+
+### Unit tests
+
+**Every Edge Function (API) and every piece of Next.js logic needs unit
+tests.** For a route handler, that usually means extracting its non-I/O
+logic into a plain, importable function (see `_shared/http.ts`) and testing
+that, rather than the handler itself — same idea on the Next.js side for
+anything more than trivial JSX (pure helpers in `lib/`, and client
+components with real behavior, e.g. `post-form.test.tsx`'s slug auto-fill).
+Write the test in the same change that adds or changes the logic, not as
+follow-up.
+
+- `apps/web`: Vitest + Testing Library (`vitest.config.mts`, jsdom
+  environment). Tests live next to the code as `*.test.ts(x)`. Run with
+  `pnpm --filter web test` (or `test:watch` while iterating).
+- `apps/supabase`: Deno's built-in test runner. Tests live next to the code
+  as `*.test.ts`. Run with `pnpm --filter @csmf/supabase test` (plain
+  `deno test functions/` under the hood — add `--allow-*` flags to that
+  script only if a future test genuinely needs a permission, e.g.
+  `--allow-env`).
+- `pnpm test` at the repo root runs both, via turbo.
 
 ### Swagger / OpenAPI docs (`apps/api-docs`)
 

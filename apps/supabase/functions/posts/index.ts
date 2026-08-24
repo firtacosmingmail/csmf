@@ -1,23 +1,10 @@
 import { Hono } from "hono";
 import { createScopedClient } from "../_shared/client.ts";
+import { pickFields, statusForPostgresError } from "../_shared/http.ts";
 
 const app = new Hono().basePath("/posts");
 
 const WRITABLE_FIELDS = ["title", "subtitle", "slug", "status", "pinned"] as const;
-
-function pickWritableFields(body: Record<string, unknown>) {
-  return Object.fromEntries(
-    WRITABLE_FIELDS.filter((key) => key in body).map((key) => [key, body[key]]),
-  );
-}
-
-// RLS violations surface as Postgres error 42501; CHECK constraint
-// violations (e.g. an invalid status) as 23514. Everything else is a 500.
-function statusForPostgresError(code: string | undefined) {
-  if (code === "42501") return 403;
-  if (code === "23514") return 400;
-  return 500;
-}
 
 // List posts. RLS scopes this per caller: anon only ever sees published
 // posts regardless of ?status=; an authenticated admin session sees
@@ -73,7 +60,7 @@ app.post("/", async (c) => {
 
   const { data, error } = await supabase
     .from("posts")
-    .insert(pickWritableFields(body))
+    .insert(pickFields(body, WRITABLE_FIELDS))
     .select()
     .single();
 
@@ -96,7 +83,7 @@ app.patch("/:id", async (c) => {
 
   const { data, error } = await supabase
     .from("posts")
-    .update(pickWritableFields(body))
+    .update(pickFields(body, WRITABLE_FIELDS))
     .eq("id", id)
     .select()
     .maybeSingle();
