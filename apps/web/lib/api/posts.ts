@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { apiFetch } from "./client";
 import type { Database } from "@csmf/supabase";
 
@@ -22,13 +23,16 @@ async function unwrapOrThrow<T>(res: Response, key: string): Promise<T> {
   return body[key];
 }
 
-export async function getPostBySlug(slug: string, accessToken?: string): Promise<PostWithBlocks | null> {
+// Wrapped in React's cache() so generateMetadata and the page component
+// (both called with the same slug during one request) share a single
+// fetch instead of hitting the API twice.
+export const getPostBySlug = cache(async (slug: string, accessToken?: string): Promise<PostWithBlocks | null> => {
   const res = await apiFetch(`/posts/${encodeURIComponent(slug)}`, { accessToken });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Failed to fetch post "${slug}": ${res.status}`);
   const { post } = await res.json();
   return post;
-}
+});
 
 export async function listPosts(opts: { status?: string; accessToken?: string } = {}): Promise<Post[]> {
   const params = new URLSearchParams();

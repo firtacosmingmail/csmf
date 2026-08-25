@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import { listPublishedPosts } from "@/lib/api/posts";
 import { getAboutMe } from "@/lib/api/about-me";
 import { totalPages } from "@/lib/pagination";
+import { stripHtml } from "@/lib/text-content";
 import { PostCard } from "@/components/post-card";
 import { PostListItem } from "@/components/post-list-item";
 import { PaginationNav } from "@/components/pagination-nav";
@@ -8,6 +10,17 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
 const PER_PAGE = 6;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const aboutMe = await getAboutMe();
+  const description = aboutMe?.bio ? stripHtml(aboutMe.bio) : undefined;
+
+  return {
+    title: aboutMe?.headline ?? undefined,
+    description,
+    openGraph: { title: aboutMe?.headline ?? undefined, description, type: "website" },
+  };
+}
 
 export default async function Home({
   searchParams,

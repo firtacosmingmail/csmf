@@ -1,12 +1,25 @@
+import type { Metadata } from "next";
 import { getAboutMe } from "@/lib/api/about-me";
 import { getWorkExperience } from "@/lib/api/work-experience";
 import { sortByStartDateDesc } from "@/lib/sort-experience";
+import { stripHtml } from "@/lib/text-content";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
 function formatDate(date: string | null): string {
   if (!date) return "";
   return new Date(date).toLocaleDateString(undefined, { year: "numeric", month: "short" });
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const aboutMe = await getAboutMe();
+  const description = aboutMe?.bio ? stripHtml(aboutMe.bio) : undefined;
+
+  return {
+    title: "About",
+    description,
+    openGraph: { title: "About", description, type: "profile" },
+  };
 }
 
 export default async function AboutPage() {

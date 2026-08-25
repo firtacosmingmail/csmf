@@ -116,4 +116,23 @@ describe("AboutForm", () => {
       expect(updateAboutMeAction).toHaveBeenCalledWith({ avatar_url: "https://example.com/avatar.png" });
     });
   });
+
+  it("shows a dismissible error banner when saving the headline fails", async () => {
+    const user = userEvent.setup();
+    vi.mocked(updateAboutMeAction).mockRejectedValueOnce(new Error("network blip"));
+
+    render(<AboutForm initialAboutMe={null} initialSocialLinks={[]} />);
+
+    await user.type(screen.getByLabelText("Headline"), "Hi");
+    await user.tab();
+
+    expect(await screen.findByText("network blip")).toBeInTheDocument();
+    await user.click(screen.getByLabelText("Dismiss error"));
+    expect(screen.queryByText("network blip")).not.toBeInTheDocument();
+  });
+
+  it("shows an empty state when there are no social links", () => {
+    render(<AboutForm initialAboutMe={null} initialSocialLinks={[]} />);
+    expect(screen.getByText("No social links yet.")).toBeInTheDocument();
+  });
 });

@@ -28,50 +28,79 @@ export function AboutForm({
   const [links, setLinks] = useState(initialSocialLinks);
   const [newPlatform, setNewPlatform] = useState("");
   const [newUrl, setNewUrl] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
-  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
+  // Imperative onClick/onBlur/onChange calls, not <form action>, so
+  // errors here wouldn't otherwise reach the nearest error.tsx boundary.
+  async function guarded(fn: () => Promise<unknown>) {
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const { url } = await uploadAvatarAction(formData);
-      setAvatarUrl(url);
-      await updateAboutMeAction({ avatar_url: url });
-    } finally {
-      setUploading(false);
-      e.target.value = "";
+      setError(null);
+      await fn();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
     }
   }
 
-  async function handleAddLink() {
+  function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    void guarded(async () => {
+      setUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const { url } = await uploadAvatarAction(formData);
+        setAvatarUrl(url);
+        await updateAboutMeAction({ avatar_url: url });
+      } finally {
+        setUploading(false);
+        e.target.value = "";
+      }
+    });
+  }
+
+  function handleAddLink() {
     if (!newPlatform.trim() || !newUrl.trim()) return;
-    const link = await createSocialLinkAction({ platform: newPlatform, url: newUrl, display_order: links.length });
-    setLinks((prev) => [...prev, link]);
-    setNewPlatform("");
-    setNewUrl("");
+    void guarded(async () => {
+      const link = await createSocialLinkAction({ platform: newPlatform, url: newUrl, display_order: links.length });
+      setLinks((prev) => [...prev, link]);
+      setNewPlatform("");
+      setNewUrl("");
+    });
   }
 
-  async function handleUpdateLink(id: string, patch: { platform?: string; url?: string }) {
-    const updated = await updateSocialLinkAction(id, patch);
-    setLinks((prev) => prev.map((l) => (l.id === id ? updated : l)));
+  function handleUpdateLink(id: string, patch: { platform?: string; url?: string }) {
+    void guarded(async () => {
+      const updated = await updateSocialLinkAction(id, patch);
+      setLinks((prev) => prev.map((l) => (l.id === id ? updated : l)));
+    });
   }
 
-  async function handleDeleteLink(id: string) {
-    await deleteSocialLinkAction(id);
-    setLinks((prev) => prev.filter((l) => l.id !== id));
+  function handleDeleteLink(id: string) {
+    void guarded(async () => {
+      await deleteSocialLinkAction(id);
+      setLinks((prev) => prev.filter((l) => l.id !== id));
+    });
   }
 
   return (
     <div className="flex flex-col gap-10">
+      {error && (
+        <div className="flex items-center justify-between gap-3 rounded border border-terracotta bg-terracotta/10 px-3 py-2 text-sm text-terracotta">
+          <span>{error}</span>
+          <button type="button" onClick={() => setError(null)} aria-label="Dismiss error" className="shrink-0">
+            ×
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm text-ink-muted">
           Headline
           <input
             value={headline}
             onChange={(e) => setHeadline(e.target.value)}
-            onBlur={() => updateAboutMeAction({ headline })}
+            onBlur={() => void guarded(() => updateAboutMeAction({ headline }))}
             className={fieldClass}
           />
         </label>
@@ -81,7 +110,7 @@ export function AboutForm({
           <RichTextEditor
             initialHtml={initialAboutMe?.bio ?? ""}
             placeholder="Write a short bio…"
-            onSave={(html) => updateAboutMeAction({ bio: html })}
+            onSave={(html) => void guarded(() => updateAboutMeAction({ bio: html }))}
           />
         </div>
 
@@ -91,7 +120,7 @@ export function AboutForm({
             type="email"
             value={contactEmail}
             onChange={(e) => setContactEmail(e.target.value)}
-            onBlur={() => updateAboutMeAction({ contact_email: contactEmail })}
+            onBlur={() => void guarded(() => updateAboutMeAction({ contact_email: contactEmail }))}
             className={fieldClass}
           />
         </label>
@@ -116,6 +145,7 @@ export function AboutForm({
 
       <div className="flex flex-col gap-3">
         <h2 className="font-serif text-xl text-ink">Social links</h2>
+        {links.length === 0 && <p className="text-sm text-ink-muted">No social links yet.</p>}
         {links.map((link) => (
           <div key={link.id} className="flex items-center gap-2">
             <input

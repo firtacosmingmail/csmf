@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { apiFetch } from "./client";
 import type { Database } from "@csmf/supabase";
 
@@ -10,12 +11,14 @@ export type AboutMeInput = {
   contact_email?: string;
 };
 
-export async function getAboutMe(): Promise<AboutMe | null> {
+// Wrapped in React's cache() — generateMetadata and the page component
+// both call this per-request, so this dedupes them into one fetch.
+export const getAboutMe = cache(async (): Promise<AboutMe | null> => {
   const res = await apiFetch("/about-me");
   if (!res.ok) throw new Error(`Failed to fetch about_me: ${res.status}`);
   const { about_me } = await res.json();
   return about_me;
-}
+});
 
 // PUT upserts, so this works for both the first-ever save and later edits
 // — the admin form doesn't need to know which case it's in.

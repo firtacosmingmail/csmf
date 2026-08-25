@@ -333,4 +333,30 @@ describe("BlockEditor", () => {
     });
     expect(screen.getByLabelText("Select as preview image")).toBeInTheDocument();
   });
+
+  it("shows a dismissible error banner when a mutation fails, and clears it on the next success", async () => {
+    const user = userEvent.setup();
+    vi.mocked(createBlockAction).mockRejectedValueOnce(new Error("network blip"));
+
+    render(<BlockEditor postId="post-1" initialBlocks={[makeBlock({ id: "block-1" })]} title="Title" subtitle={null} initialPreviewImageBlockId={null} />);
+
+    await user.click(screen.getAllByLabelText("Insert block")[0]);
+    await user.click(screen.getByText("Heading"));
+
+    expect(await screen.findByText("network blip")).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText("Dismiss error"));
+    expect(screen.queryByText("network blip")).not.toBeInTheDocument();
+
+    vi.mocked(createBlockAction).mockResolvedValue(
+      makeBlock({ id: "new-block", type: "heading", display_order: 1 }),
+    );
+    await user.click(screen.getAllByLabelText("Insert block")[0]);
+    await user.click(screen.getByText("Heading"));
+
+    await waitFor(() => {
+      expect(screen.getAllByLabelText("block-text")).toHaveLength(2);
+    });
+    expect(screen.queryByText("network blip")).not.toBeInTheDocument();
+  });
 });

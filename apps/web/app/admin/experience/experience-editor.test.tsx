@@ -82,4 +82,21 @@ describe("ExperienceEditor", () => {
     });
     expect(screen.queryByDisplayValue("Acme")).not.toBeInTheDocument();
   });
+
+  it("shows an empty state when there is no experience yet", () => {
+    render(<ExperienceEditor initialExperience={[]} />);
+    expect(screen.getByText("No experience yet — add your first entry below.")).toBeInTheDocument();
+  });
+
+  it("shows a dismissible error banner when a mutation fails", async () => {
+    const user = userEvent.setup();
+    vi.mocked(deleteExperienceAction).mockRejectedValueOnce(new Error("network blip"));
+
+    render(<ExperienceEditor initialExperience={[makeItem({})]} />);
+    await user.click(screen.getByLabelText("Delete"));
+
+    expect(await screen.findByText("network blip")).toBeInTheDocument();
+    await user.click(screen.getByLabelText("Dismiss error"));
+    expect(screen.queryByText("network blip")).not.toBeInTheDocument();
+  });
 });

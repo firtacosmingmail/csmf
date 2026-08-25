@@ -54,6 +54,21 @@ export function BlockEditor({
   const [previewBlocks, setPreviewBlocks] = useState<PostBlock[]>(initialBlocks);
   const [preparingPreview, setPreparingPreview] = useState(false);
   const [previewImageBlockId, setPreviewImageBlockId] = useState(initialPreviewImageBlockId);
+  const [error, setError] = useState<string | null>(null);
+
+  // These handlers are imperative onClick/onBlur calls, not <form
+  // action={...}> — Next.js's error.tsx boundary only catches the latter,
+  // so a thrown error here would otherwise just be a silent unhandled
+  // rejection. Routes every mutation through this so a failure always
+  // surfaces as a visible, dismissible message instead.
+  async function guarded(fn: () => Promise<void>) {
+    try {
+      setError(null);
+      await fn();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    }
+  }
 
   // Persists the new positions for whichever blocks moved, and updates
   // local state to match — every insert/delete/reorder routes through this
@@ -68,50 +83,60 @@ export function BlockEditor({
     );
   }
 
-  async function handleInsert(type: string, afterIndex: number) {
-    const block = await createBlockAction(postId, {
-      type,
-      content: initialContentFor(type),
-      display_order: afterIndex + 1,
+  function handleInsert(type: string, afterIndex: number) {
+    void guarded(async () => {
+      const block = await createBlockAction(postId, {
+        type,
+        content: initialContentFor(type),
+        display_order: afterIndex + 1,
+      });
+      const next = [...blocks];
+      next.splice(afterIndex + 1, 0, block);
+      await persistOrder(next, blocks);
     });
-    const next = [...blocks];
-    next.splice(afterIndex + 1, 0, block);
-    await persistOrder(next, blocks);
   }
 
-  async function handleInsertImage(file: File, afterIndex: number) {
-    const formData = new FormData();
-    formData.append("file", file);
-    const { url } = await uploadImageAction(formData);
-    const block = await createBlockAction(postId, {
-      type: "image",
-      content: { url },
-      display_order: afterIndex + 1,
+  function handleInsertImage(file: File, afterIndex: number) {
+    void guarded(async () => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const { url } = await uploadImageAction(formData);
+      const block = await createBlockAction(postId, {
+        type: "image",
+        content: { url },
+        display_order: afterIndex + 1,
+      });
+      // Mirrors the backend: the first image block added auto-becomes the
+      // preview image (POST /posts/:id/blocks does this server-side
+      // already — this just keeps local state in sync without a refresh).
+      setPreviewImageBlockId((current) => current ?? block.id);
+      const next = [...blocks];
+      next.splice(afterIndex + 1, 0, block);
+      await persistOrder(next, blocks);
     });
-    // Mirrors the backend: the first image block added auto-becomes the
-    // preview image (POST /posts/:id/blocks does this server-side already
-    // — this just keeps local state in sync without a refresh).
-    setPreviewImageBlockId((current) => current ?? block.id);
-    const next = [...blocks];
-    next.splice(afterIndex + 1, 0, block);
-    await persistOrder(next, blocks);
   }
 
-  async function handleDelete(id: string) {
-    await deleteBlockAction(id);
-    const next = blocks.filter((b) => b.id !== id);
-    await persistOrder(next, blocks);
-    if (id === previewImageBlockId) setPreviewImageBlockId(null);
+  function handleDelete(id: string) {
+    void guarded(async () => {
+      await deleteBlockAction(id);
+      const next = blocks.filter((b) => b.id !== id);
+      await persistOrder(next, blocks);
+      if (id === previewImageBlockId) setPreviewImageBlockId(null);
+    });
   }
 
-  async function handleSelectPreviewImage(blockId: string | null) {
-    setPreviewImageBlockId(blockId);
-    await setPreviewImageAction(postId, blockId);
+  function handleSelectPreviewImage(blockId: string | null) {
+    void guarded(async () => {
+      setPreviewImageBlockId(blockId);
+      await setPreviewImageAction(postId, blockId);
+    });
   }
 
-  async function handleContentSave(id: string, content: Record<string, unknown>) {
-    const updated = await updateBlockAction(id, { content });
-    setBlocks((prev) => prev.map((b) => (b.id === id ? updated : b)));
+  function handleContentSave(id: string, content: Record<string, unknown>) {
+    void guarded(async () => {
+      const updated = await updateBlockAction(id, { content });
+      setBlocks((prev) => prev.map((b) => (b.id === id ? updated : b)));
+    });
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -120,28 +145,39 @@ export function BlockEditor({
     const oldIndex = blocks.findIndex((b) => b.id === active.id);
     const newIndex = blocks.findIndex((b) => b.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
-    void persistOrder(arrayMove(blocks, oldIndex, newIndex), blocks);
+    void guarded(() => persistOrder(arrayMove(blocks, oldIndex, newIndex), blocks));
   }
 
   // Syntax highlighting needs a server runtime (Shiki), so entering
   // preview fetches highlighted code blocks the same way the public page
   // renders them, rather than falling back to plain text.
-  async function handleTogglePreview() {
+  function handleTogglePreview() {
     if (previewMode) {
       setPreviewMode(false);
       return;
     }
-    setPreparingPreview(true);
-    try {
-      setPreviewBlocks(await highlightBlocksAction(blocks));
-      setPreviewMode(true);
-    } finally {
-      setPreparingPreview(false);
-    }
+    void guarded(async () => {
+      setPreparingPreview(true);
+      try {
+        setPreviewBlocks(await highlightBlocksAction(blocks));
+        setPreviewMode(true);
+      } finally {
+        setPreparingPreview(false);
+      }
+    });
   }
 
   return (
     <div className="flex flex-col gap-2">
+      {error && (
+        <div className="flex items-center justify-between gap-3 rounded border border-terracotta bg-terracotta/10 px-3 py-2 text-sm text-terracotta">
+          <span>{error}</span>
+          <button type="button" onClick={() => setError(null)} aria-label="Dismiss error" className="shrink-0">
+            ×
+          </button>
+        </div>
+      )}
+
       <button
         type="button"
         onClick={handleTogglePreview}
@@ -171,6 +207,7 @@ export function BlockEditor({
               onInsert={(type) => handleInsert(type, -1)}
               onInsertImage={(file) => handleInsertImage(file, -1)}
             />
+            {blocks.length === 0 && <p className="text-sm text-ink-muted">No content yet — use + to add a block.</p>}
             <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
                 {blocks.map((block, index) => (
