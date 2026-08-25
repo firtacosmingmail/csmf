@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { listComments, type CommentStatus } from "@/lib/api/comments";
 import { CommentRowActions } from "./comment-row-actions";
+import { AdminNav } from "@/components/admin-nav";
 
 const TABS: { status: CommentStatus; label: string }[] = [
   { status: "pending", label: "Pending" },
@@ -27,6 +28,7 @@ export default async function AdminCommentsPage({
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-12">
+      <AdminNav />
       <h1 className="font-serif text-3xl text-ink">Comments</h1>
 
       <nav className="flex gap-4 border-b border-border font-sans text-sm">

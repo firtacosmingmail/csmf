@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { listPosts } from "@/lib/api/posts";
 import { deletePostAction } from "./actions";
 import { DeleteButton } from "./delete-button";
+import { AdminNav } from "@/components/admin-nav";
 
 export default async function AdminPostsPage() {
   const supabase = await createClient();
@@ -13,6 +14,7 @@ export default async function AdminPostsPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-12">
+      <AdminNav />
       <div className="flex items-center justify-between">
         <h1 className="font-serif text-3xl text-ink">Posts</h1>
         <Link
