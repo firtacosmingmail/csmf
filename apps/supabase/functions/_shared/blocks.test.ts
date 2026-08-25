@@ -18,9 +18,29 @@ Deno.test("validateBlockContent rejects unknown fields on a text block", () => {
   assertEquals(result.success, false);
 });
 
-Deno.test("validateBlockContent rejects block types not yet supported by the editor", () => {
+Deno.test("validateBlockContent accepts a valid code block shape", () => {
   const result = validateBlockContent("code", { code: "1+1", language: "js" });
-  assertEquals(result, { success: false, error: "Unsupported block type: code" });
+  assertEquals(result, { success: true, data: { code: "1+1", language: "js" } });
+});
+
+Deno.test("validateBlockContent rejects a code block missing language", () => {
+  const result = validateBlockContent("code", { code: "1+1" });
+  assertEquals(result.success, false);
+});
+
+Deno.test("validateBlockContent accepts an empty object for a separator block", () => {
+  const result = validateBlockContent("separator", {});
+  assertEquals(result, { success: true, data: {} });
+});
+
+Deno.test("validateBlockContent rejects a separator block with any fields", () => {
+  const result = validateBlockContent("separator", { text: "nope" });
+  assertEquals(result.success, false);
+});
+
+Deno.test("validateBlockContent rejects block types not yet supported by the editor", () => {
+  const result = validateBlockContent("image", { url: "https://example.com/x.png" });
+  assertEquals(result, { success: false, error: "Unsupported block type: image" });
 });
 
 Deno.test("validateBlockContent rejects an unknown block type", () => {

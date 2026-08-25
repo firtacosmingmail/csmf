@@ -237,10 +237,11 @@ paths:
       summary: Add a block to a post
       description: >
         Admin only — RLS rejects an anonymous caller's insert with 403.
-        `content` is validated against `type` with Zod; currently only
-        `heading`/`subheading`/`paragraph` (`{text}`) are accepted, other
-        block types 400 with "Unsupported block type" until their editor
-        phase lands. Omit `display_order` to default to 0.
+        `content` is validated against `type` with Zod; currently
+        `heading`/`subheading`/`paragraph` (`{text}`), `code` (`{code,
+        language}`), and `separator` (`{}`) are accepted — `image` 400s with
+        "Unsupported block type" until its editor phase lands. Omit
+        `display_order` to default to 0.
       operationId: createPostBlock
       parameters:
         - name: id
@@ -525,8 +526,9 @@ components:
         content:
           type: object
           description: >
-            Must match `type`'s shape. Currently only `{text}` (for
-            heading/subheading/paragraph) validates — other types 400.
+            Must match `type`'s shape: `{text}` (heading/subheading/
+            paragraph), `{code, language}` (code), or `{}` (separator) —
+            `image` 400s until its editor phase lands.
         display_order:
           type: integer
     PostWithBlocks:

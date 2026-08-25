@@ -29,7 +29,15 @@ function PostBlockView({ block }: { block: PostBlock }) {
     case "paragraph":
       return <p className="font-sans text-ink" dangerouslySetInnerHTML={{ __html: String(content.text ?? "") }} />;
     case "code":
-      return (
+      // content.highlightedHtml is precomputed Shiki output (see
+      // lib/shiki.ts) — only the public blog page bothers, so the editor's
+      // own preview falls back to plain unhighlighted text.
+      return typeof content.highlightedHtml === "string" ? (
+        <div
+          className="overflow-x-auto rounded border border-border font-mono text-sm [&_pre]:p-4"
+          dangerouslySetInnerHTML={{ __html: content.highlightedHtml }}
+        />
+      ) : (
         <pre className="overflow-x-auto rounded border border-border bg-paper-raised p-4 font-mono text-sm text-ink">
           <code>{String(content.code ?? "")}</code>
         </pre>

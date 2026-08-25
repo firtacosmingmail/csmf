@@ -4,14 +4,18 @@ export const BLOCK_TYPES = ["heading", "subheading", "paragraph", "code", "separ
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
 const textBlockContent = z.object({ text: z.string() }).strict();
+const codeBlockContent = z.object({ code: z.string(), language: z.string() }).strict();
+const separatorBlockContent = z.object({}).strict();
 
 // Content shape validators, keyed by block type. Only the types the block
-// editor currently supports are populated — later phases (code/separator,
-// image) extend this map rather than replacing it.
+// editor currently supports are populated — later phases (image) extend
+// this map rather than replacing it.
 const CONTENT_SCHEMAS: Partial<Record<BlockType, z.ZodTypeAny>> = {
   heading: textBlockContent,
   subheading: textBlockContent,
   paragraph: textBlockContent,
+  code: codeBlockContent,
+  separator: separatorBlockContent,
 };
 
 export function validateBlockContent(

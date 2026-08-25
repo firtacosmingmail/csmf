@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createBlock, updateBlock, deleteBlock, type BlockInput, type PostBlock } from "@/lib/api/blocks";
+import { highlightCodeBlocks } from "@/lib/shiki";
 
 async function requireAccessToken() {
   const supabase = await createClient();
@@ -32,4 +33,11 @@ export async function updateBlockAction(
 export async function deleteBlockAction(id: string): Promise<void> {
   const accessToken = await requireAccessToken();
   return deleteBlock(id, accessToken);
+}
+
+// Shiki needs a Node/server runtime, so the editor's Preview toggle routes
+// through this action to render code blocks the same way the public page
+// does — instead of Preview silently falling back to plain text.
+export async function highlightBlocksAction(blocks: PostBlock[]): Promise<PostBlock[]> {
+  return highlightCodeBlocks(blocks);
 }

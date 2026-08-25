@@ -6,6 +6,8 @@ const BLOCK_OPTIONS: { type: string; label: string }[] = [
   { type: "heading", label: "Heading" },
   { type: "subheading", label: "Subheading" },
   { type: "paragraph", label: "Paragraph" },
+  { type: "code", label: "Code" },
+  { type: "separator", label: "Separator" },
 ];
 
 export function InsertMenu({ onInsert }: { onInsert: (type: string) => void }) {

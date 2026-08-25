@@ -3,6 +3,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { RichTextBlock } from "./rich-text-block";
+import { CodeBlockEditor } from "./code-block-editor";
 import type { PostBlock } from "@/lib/api/blocks";
 
 const TYPE_STYLES: Record<string, string> = {
@@ -23,7 +24,7 @@ export function BlockItem({
   onDelete,
 }: {
   block: PostBlock;
-  onSave: (text: string) => void;
+  onSave: (content: Record<string, unknown>) => void;
   onDelete: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
@@ -35,7 +36,6 @@ export function BlockItem({
   };
 
   const content = block.content as Record<string, unknown>;
-  const initialText = typeof content.text === "string" ? content.text : "";
 
   return (
     <div
@@ -53,12 +53,22 @@ export function BlockItem({
         ⠿
       </button>
       <div className="min-w-0 flex-1">
-        <RichTextBlock
-          initialText={initialText}
-          placeholder={TYPE_PLACEHOLDERS[block.type] ?? ""}
-          className={TYPE_STYLES[block.type] ?? "font-sans text-ink"}
-          onSave={onSave}
-        />
+        {block.type === "code" ? (
+          <CodeBlockEditor
+            initialCode={typeof content.code === "string" ? content.code : ""}
+            initialLanguage={typeof content.language === "string" ? content.language : ""}
+            onSave={onSave}
+          />
+        ) : block.type === "separator" ? (
+          <hr className="my-3 border-border" />
+        ) : (
+          <RichTextBlock
+            initialText={typeof content.text === "string" ? content.text : ""}
+            placeholder={TYPE_PLACEHOLDERS[block.type] ?? ""}
+            className={TYPE_STYLES[block.type] ?? "font-sans text-ink"}
+            onSave={(text) => onSave({ text })}
+          />
+        )}
       </div>
       <button
         type="button"
