@@ -1,7 +1,7 @@
 import { apiFetch } from "./client";
 import type { Database } from "@csmf/supabase";
 
-type Post = Database["public"]["Tables"]["posts"]["Row"];
+export type Post = Database["public"]["Tables"]["posts"]["Row"];
 type PostBlock = Database["public"]["Tables"]["post_blocks"]["Row"];
 export type PostWithBlocks = Post & { post_blocks: PostBlock[] };
 
@@ -65,6 +65,20 @@ export async function updatePost(
     accessToken,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
+  });
+  return unwrapOrThrow<Post>(res, "post");
+}
+
+export async function setPreviewImage(
+  postId: string,
+  previewImageBlockId: string | null,
+  accessToken: string,
+): Promise<Post> {
+  const res = await apiFetch(`/posts/${encodeURIComponent(postId)}/preview-image`, {
+    method: "PATCH",
+    accessToken,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ preview_image_block_id: previewImageBlockId }),
   });
   return unwrapOrThrow<Post>(res, "post");
 }

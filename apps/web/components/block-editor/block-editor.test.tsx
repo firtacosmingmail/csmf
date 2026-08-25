@@ -7,6 +7,8 @@ import {
   updateBlockAction,
   deleteBlockAction,
   highlightBlocksAction,
+  uploadImageAction,
+  setPreviewImageAction,
 } from "@/app/admin/posts/[id]/edit/block-actions";
 import type { PostBlock } from "@/lib/api/blocks";
 
@@ -24,6 +26,8 @@ vi.mock("@/app/admin/posts/[id]/edit/block-actions", () => ({
   updateBlockAction: vi.fn(),
   deleteBlockAction: vi.fn(),
   highlightBlocksAction: vi.fn(),
+  uploadImageAction: vi.fn(),
+  setPreviewImageAction: vi.fn(),
 }));
 
 function makeBlock(overrides: Partial<PostBlock>): PostBlock {
@@ -45,6 +49,8 @@ describe("BlockEditor", () => {
     vi.mocked(updateBlockAction).mockReset();
     vi.mocked(deleteBlockAction).mockReset();
     vi.mocked(highlightBlocksAction).mockReset();
+    vi.mocked(uploadImageAction).mockReset();
+    vi.mocked(setPreviewImageAction).mockReset();
     vi.mocked(updateBlockAction).mockImplementation(async (id, data) =>
       makeBlock({ id, ...data } as Partial<PostBlock>),
     );
@@ -57,7 +63,7 @@ describe("BlockEditor", () => {
       makeBlock({ id: "new-block", type: "heading", display_order: 1 }),
     );
 
-    render(<BlockEditor postId="post-1" initialBlocks={[makeBlock({ id: "block-1" })]} title="Title" subtitle={null} />);
+    render(<BlockEditor postId="post-1" initialBlocks={[makeBlock({ id: "block-1" })]} title="Title" subtitle={null} initialPreviewImageBlockId={null} />);
 
     const insertButtons = screen.getAllByLabelText("Insert block");
     await user.click(insertButtons[0]);
@@ -79,7 +85,7 @@ describe("BlockEditor", () => {
       makeBlock({ id: "new-code", type: "code", content: { code: "", language: "" }, display_order: 1 }),
     );
 
-    render(<BlockEditor postId="post-1" initialBlocks={[makeBlock({ id: "block-1" })]} title="Title" subtitle={null} />);
+    render(<BlockEditor postId="post-1" initialBlocks={[makeBlock({ id: "block-1" })]} title="Title" subtitle={null} initialPreviewImageBlockId={null} />);
 
     await user.click(screen.getAllByLabelText("Insert block")[0]);
     await user.click(screen.getByText("Code"));
@@ -101,7 +107,7 @@ describe("BlockEditor", () => {
       makeBlock({ id: "new-sep", type: "separator", content: {}, display_order: 1 }),
     );
 
-    render(<BlockEditor postId="post-1" initialBlocks={[makeBlock({ id: "block-1" })]} title="Title" subtitle={null} />);
+    render(<BlockEditor postId="post-1" initialBlocks={[makeBlock({ id: "block-1" })]} title="Title" subtitle={null} initialPreviewImageBlockId={null} />);
 
     await user.click(screen.getAllByLabelText("Insert block")[0]);
     await user.click(screen.getByText("Separator"));
@@ -125,6 +131,7 @@ describe("BlockEditor", () => {
         initialBlocks={[makeBlock({ id: "block-1", type: "code", content: { code: "", language: "" } })]}
         title="Title"
         subtitle={null}
+        initialPreviewImageBlockId={null}
       />,
     );
 
@@ -145,6 +152,7 @@ describe("BlockEditor", () => {
         initialBlocks={[makeBlock({ id: "block-1" }), makeBlock({ id: "block-2", display_order: 1 })]}
         title="Title"
         subtitle={null}
+        initialPreviewImageBlockId={null}
       />,
     );
 
@@ -162,7 +170,7 @@ describe("BlockEditor", () => {
   it("editing a block's text calls updateBlockAction with the new content", async () => {
     const user = userEvent.setup();
 
-    render(<BlockEditor postId="post-1" initialBlocks={[makeBlock({ id: "block-1" })]} title="Title" subtitle={null} />);
+    render(<BlockEditor postId="post-1" initialBlocks={[makeBlock({ id: "block-1" })]} title="Title" subtitle={null} initialPreviewImageBlockId={null} />);
 
     await user.type(screen.getByLabelText("block-text"), "Hi");
 
@@ -175,7 +183,7 @@ describe("BlockEditor", () => {
     const user = userEvent.setup();
 
     render(
-      <BlockEditor postId="post-1" initialBlocks={[makeBlock({ id: "block-1" })]} title="My Post" subtitle="Sub" />,
+      <BlockEditor postId="post-1" initialBlocks={[makeBlock({ id: "block-1" })]} title="My Post" subtitle="Sub" initialPreviewImageBlockId={null} />,
     );
 
     await user.click(screen.getByText("Preview"));
@@ -199,6 +207,7 @@ describe("BlockEditor", () => {
         initialBlocks={[makeBlock({ id: "block-1", type: "code", content: { code: "1+1", language: "js" } })]}
         title="My Post"
         subtitle={null}
+        initialPreviewImageBlockId={null}
       />,
     );
 
@@ -210,5 +219,73 @@ describe("BlockEditor", () => {
       ]);
     });
     expect(screen.getByText("HL")).toBeInTheDocument();
+  });
+
+  it("inserting an image uploads the file then creates a block with the returned url", async () => {
+    const user = userEvent.setup();
+    vi.mocked(uploadImageAction).mockResolvedValue({ url: "https://example.com/x.png", width: 10, height: 10 });
+    vi.mocked(createBlockAction).mockResolvedValue(
+      makeBlock({ id: "new-image", type: "image", content: { url: "https://example.com/x.png" }, display_order: 1 }),
+    );
+
+    render(<BlockEditor postId="post-1" initialBlocks={[makeBlock({ id: "block-1" })]} title="Title" subtitle={null} initialPreviewImageBlockId={null} />);
+
+    const file = new File(["fake"], "photo.png", { type: "image/png" });
+    await user.upload(screen.getAllByLabelText("Upload image")[0], file);
+
+    await waitFor(() => {
+      expect(uploadImageAction).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(createBlockAction).toHaveBeenCalledWith("post-1", {
+        type: "image",
+        content: { url: "https://example.com/x.png" },
+        display_order: 0,
+      });
+    });
+  });
+
+  it("selecting a preview image calls setPreviewImageAction and shows it as selected", async () => {
+    const user = userEvent.setup();
+    vi.mocked(setPreviewImageAction).mockResolvedValue({} as Awaited<ReturnType<typeof setPreviewImageAction>>);
+
+    render(
+      <BlockEditor
+        postId="post-1"
+        initialBlocks={[makeBlock({ id: "img-1", type: "image", content: { url: "https://example.com/a.png" } })]}
+        title="Title"
+        subtitle={null}
+        initialPreviewImageBlockId={null}
+      />,
+    );
+
+    await user.click(screen.getByLabelText("Select as preview image"));
+
+    await waitFor(() => {
+      expect(setPreviewImageAction).toHaveBeenCalledWith("post-1", "img-1");
+    });
+    expect(screen.getByLabelText("Selected preview image")).toBeInTheDocument();
+  });
+
+  it("clicking an already-selected preview image clears it", async () => {
+    const user = userEvent.setup();
+    vi.mocked(setPreviewImageAction).mockResolvedValue({} as Awaited<ReturnType<typeof setPreviewImageAction>>);
+
+    render(
+      <BlockEditor
+        postId="post-1"
+        initialBlocks={[makeBlock({ id: "img-1", type: "image", content: { url: "https://example.com/a.png" } })]}
+        title="Title"
+        subtitle={null}
+        initialPreviewImageBlockId="img-1"
+      />,
+    );
+
+    await user.click(screen.getByLabelText("Selected preview image"));
+
+    await waitFor(() => {
+      expect(setPreviewImageAction).toHaveBeenCalledWith("post-1", null);
+    });
+    expect(screen.getByLabelText("Select as preview image")).toBeInTheDocument();
   });
 });

@@ -5,6 +5,7 @@ import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { BlockItem } from "./block-item";
 import { InsertMenu } from "./insert-menu";
+import { PreviewImagePicker } from "./preview-image-picker";
 import { PostBlocksRenderer } from "@/components/post-blocks-renderer";
 import { normalizeOrder } from "@/lib/block-order";
 import {
@@ -12,6 +13,8 @@ import {
   updateBlockAction,
   deleteBlockAction,
   highlightBlocksAction,
+  uploadImageAction,
+  setPreviewImageAction,
 } from "@/app/admin/posts/[id]/edit/block-actions";
 import type { PostBlock } from "@/lib/api/blocks";
 
@@ -38,16 +41,19 @@ export function BlockEditor({
   initialBlocks,
   title,
   subtitle,
+  initialPreviewImageBlockId,
 }: {
   postId: string;
   initialBlocks: PostBlock[];
   title: string;
   subtitle: string | null;
+  initialPreviewImageBlockId: string | null;
 }) {
   const [blocks, setBlocks] = useState<PostBlock[]>(initialBlocks);
   const [previewMode, setPreviewMode] = useState(false);
   const [previewBlocks, setPreviewBlocks] = useState<PostBlock[]>(initialBlocks);
   const [preparingPreview, setPreparingPreview] = useState(false);
+  const [previewImageBlockId, setPreviewImageBlockId] = useState(initialPreviewImageBlockId);
 
   // Persists the new positions for whichever blocks moved, and updates
   // local state to match — every insert/delete/reorder routes through this
@@ -73,10 +79,30 @@ export function BlockEditor({
     await persistOrder(next, blocks);
   }
 
+  async function handleInsertImage(file: File, afterIndex: number) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const { url } = await uploadImageAction(formData);
+    const block = await createBlockAction(postId, {
+      type: "image",
+      content: { url },
+      display_order: afterIndex + 1,
+    });
+    const next = [...blocks];
+    next.splice(afterIndex + 1, 0, block);
+    await persistOrder(next, blocks);
+  }
+
   async function handleDelete(id: string) {
     await deleteBlockAction(id);
     const next = blocks.filter((b) => b.id !== id);
     await persistOrder(next, blocks);
+    if (id === previewImageBlockId) setPreviewImageBlockId(null);
+  }
+
+  async function handleSelectPreviewImage(blockId: string | null) {
+    setPreviewImageBlockId(blockId);
+    await setPreviewImageAction(postId, blockId);
   }
 
   async function handleContentSave(id: string, content: Record<string, unknown>) {
@@ -130,22 +156,35 @@ export function BlockEditor({
           <PostBlocksRenderer blocks={previewBlocks} />
         </div>
       ) : (
-        <div className="flex flex-col gap-1">
-          <InsertMenu onInsert={(type) => handleInsert(type, -1)} />
-          <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-              {blocks.map((block, index) => (
-                <div key={block.id} className="flex flex-col gap-1">
-                  <BlockItem
-                    block={block}
-                    onSave={(content) => handleContentSave(block.id, content)}
-                    onDelete={() => handleDelete(block.id)}
-                  />
-                  <InsertMenu onInsert={(type) => handleInsert(type, index)} />
-                </div>
-              ))}
-            </SortableContext>
-          </DndContext>
+        <div className="flex flex-col gap-3">
+          <PreviewImagePicker
+            imageBlocks={blocks.filter((b) => b.type === "image")}
+            selectedBlockId={previewImageBlockId}
+            onSelect={handleSelectPreviewImage}
+          />
+          <div className="flex flex-col gap-1">
+            <InsertMenu
+              onInsert={(type) => handleInsert(type, -1)}
+              onInsertImage={(file) => handleInsertImage(file, -1)}
+            />
+            <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+                {blocks.map((block, index) => (
+                  <div key={block.id} className="flex flex-col gap-1">
+                    <BlockItem
+                      block={block}
+                      onSave={(content) => handleContentSave(block.id, content)}
+                      onDelete={() => handleDelete(block.id)}
+                    />
+                    <InsertMenu
+                      onInsert={(type) => handleInsert(type, index)}
+                      onInsertImage={(file) => handleInsertImage(file, index)}
+                    />
+                  </div>
+                ))}
+              </SortableContext>
+            </DndContext>
+          </div>
         </div>
       )}
     </div>

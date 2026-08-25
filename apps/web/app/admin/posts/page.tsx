@@ -29,6 +29,7 @@ export default async function AdminPostsPage() {
         <table className="w-full text-left font-sans text-sm">
           <thead>
             <tr className="border-b border-border text-ink-muted">
+              <th className="py-2 pr-4"></th>
               <th className="py-2 pr-4">Title</th>
               <th className="py-2 pr-4">Status</th>
               <th className="py-2 pr-4">Pinned</th>
@@ -39,6 +40,16 @@ export default async function AdminPostsPage() {
           <tbody>
             {posts.map((post) => (
               <tr key={post.id} className="border-b border-border">
+                <td className="py-2 pr-4">
+                  {post.preview_image_url && (
+                    // eslint-disable-next-line @next/next/no-img-element -- arbitrary uploaded image URL
+                    <img
+                      src={post.preview_image_url}
+                      alt={post.preview_image_alt ?? ""}
+                      className="h-10 w-10 rounded object-cover"
+                    />
+                  )}
+                </td>
                 <td className="py-2 pr-4 text-ink">{post.title}</td>
                 <td className="py-2 pr-4">
                   <span

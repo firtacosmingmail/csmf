@@ -36,6 +36,7 @@ export default async function EditPostPage({
           initialBlocks={postWithBlocks?.post_blocks ?? []}
           title={post.title}
           subtitle={post.subtitle}
+          initialPreviewImageBlockId={post.preview_image_block_id}
         />
       </div>
     </main>

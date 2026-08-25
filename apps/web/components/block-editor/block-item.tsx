@@ -4,6 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { RichTextBlock } from "./rich-text-block";
 import { CodeBlockEditor } from "./code-block-editor";
+import { ImageBlockEditor } from "./image-block-editor";
 import type { PostBlock } from "@/lib/api/blocks";
 
 const TYPE_STYLES: Record<string, string> = {
@@ -61,6 +62,15 @@ export function BlockItem({
           />
         ) : block.type === "separator" ? (
           <hr className="my-3 border-border" />
+        ) : block.type === "image" ? (
+          <ImageBlockEditor
+            url={typeof content.url === "string" ? content.url : ""}
+            initialAltText={typeof content.alt_text === "string" ? content.alt_text : ""}
+            initialCaption={typeof content.caption === "string" ? content.caption : ""}
+            initialSourceText={typeof content.source_text === "string" ? content.source_text : ""}
+            initialSourceUrl={typeof content.source_url === "string" ? content.source_url : ""}
+            onSave={onSave}
+          />
         ) : (
           <RichTextBlock
             initialText={typeof content.text === "string" ? content.text : ""}

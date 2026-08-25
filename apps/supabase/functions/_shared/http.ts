@@ -7,6 +7,14 @@ export function statusForPostgresError(code: string | undefined): number {
   return 500;
 }
 
+// Maps a Supabase Storage error's statusCode (a string on the error object,
+// e.g. "403" for an RLS violation) to an HTTP status — falls back to 500
+// for anything missing or out of the valid HTTP status range.
+export function statusForStorageError(statusCode: string | number | undefined): number {
+  const n = Number(statusCode);
+  return Number.isInteger(n) && n >= 400 && n < 600 ? n : 500;
+}
+
 // Picks only the given fields out of a parsed request body — used to build
 // insert/update payloads without letting a caller set arbitrary columns.
 export function pickFields<T extends Record<string, unknown>>(

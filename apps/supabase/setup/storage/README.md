@@ -6,5 +6,5 @@ One SQL file per Supabase Storage bucket, named `<bucket-name>.sql` —
 migration history, so `../install.sh` can stand up every bucket a fresh
 environment needs.
 
-No buckets exist yet. The first is expected in Phase 07 (images), which
-adds a `post_blocks` image bucket with public read / admin-only write.
+- `images.sql` — the `images` bucket (public read, admin-only write),
+  backing the `image` `post_blocks` content shape.

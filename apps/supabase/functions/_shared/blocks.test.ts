@@ -38,9 +38,31 @@ Deno.test("validateBlockContent rejects a separator block with any fields", () =
   assertEquals(result.success, false);
 });
 
-Deno.test("validateBlockContent rejects block types not yet supported by the editor", () => {
+Deno.test("validateBlockContent accepts an image block with just a url", () => {
   const result = validateBlockContent("image", { url: "https://example.com/x.png" });
-  assertEquals(result, { success: false, error: "Unsupported block type: image" });
+  assertEquals(result, { success: true, data: { url: "https://example.com/x.png" } });
+});
+
+Deno.test("validateBlockContent accepts an image block with all optional fields filled in", () => {
+  const content = {
+    url: "https://example.com/x.png",
+    alt_text: "A cat",
+    caption: "My cat",
+    source_text: "Photo by me",
+    source_url: "https://example.com",
+  };
+  const result = validateBlockContent("image", content);
+  assertEquals(result, { success: true, data: content });
+});
+
+Deno.test("validateBlockContent rejects an image block with an empty url", () => {
+  const result = validateBlockContent("image", { url: "" });
+  assertEquals(result.success, false);
+});
+
+Deno.test("validateBlockContent rejects an image block missing url", () => {
+  const result = validateBlockContent("image", { alt_text: "A cat" });
+  assertEquals(result.success, false);
 });
 
 Deno.test("validateBlockContent rejects an unknown block type", () => {

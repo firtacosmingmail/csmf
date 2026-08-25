@@ -440,3 +440,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/blocks/deno.json"
 entrypoint = "./functions/blocks/index.ts"
+
+[functions.images]
+enabled = true
+verify_jwt = false
+import_map = "./functions/images/deno.json"
+entrypoint = "./functions/images/index.ts"

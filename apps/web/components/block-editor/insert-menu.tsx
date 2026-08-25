@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const BLOCK_OPTIONS: { type: string; label: string }[] = [
   { type: "heading", label: "Heading" },
@@ -10,8 +10,15 @@ const BLOCK_OPTIONS: { type: string; label: string }[] = [
   { type: "separator", label: "Separator" },
 ];
 
-export function InsertMenu({ onInsert }: { onInsert: (type: string) => void }) {
+export function InsertMenu({
+  onInsert,
+  onInsertImage,
+}: {
+  onInsert: (type: string) => void;
+  onInsertImage: (file: File) => void;
+}) {
   const [open, setOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="relative">
@@ -39,8 +46,30 @@ export function InsertMenu({ onInsert }: { onInsert: (type: string) => void }) {
               {opt.label}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              fileInputRef.current?.click();
+            }}
+            className="whitespace-nowrap px-3 py-1 text-left text-sm text-ink hover:bg-paper"
+          >
+            Image
+          </button>
         </div>
       )}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        aria-label="Upload image"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onInsertImage(file);
+          e.target.value = "";
+        }}
+      />
     </div>
   );
 }

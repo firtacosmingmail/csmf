@@ -3,6 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { createBlock, updateBlock, deleteBlock, type BlockInput, type PostBlock } from "@/lib/api/blocks";
 import { highlightCodeBlocks } from "@/lib/shiki";
+import { uploadImage, type UploadedImage } from "@/lib/api/images";
+import { setPreviewImage, type Post } from "@/lib/api/posts";
 
 async function requireAccessToken() {
   const supabase = await createClient();
@@ -40,4 +42,18 @@ export async function deleteBlockAction(id: string): Promise<void> {
 // does — instead of Preview silently falling back to plain text.
 export async function highlightBlocksAction(blocks: PostBlock[]): Promise<PostBlock[]> {
   return highlightCodeBlocks(blocks);
+}
+
+// FormData (with a File field) is one of the types React lets a client
+// component pass straight into a server action.
+export async function uploadImageAction(formData: FormData): Promise<UploadedImage> {
+  const accessToken = await requireAccessToken();
+  const file = formData.get("file");
+  if (!(file instanceof File)) throw new Error("Missing file");
+  return uploadImage(file, accessToken);
+}
+
+export async function setPreviewImageAction(postId: string, blockId: string | null): Promise<Post> {
+  const accessToken = await requireAccessToken();
+  return setPreviewImage(postId, blockId, accessToken);
 }

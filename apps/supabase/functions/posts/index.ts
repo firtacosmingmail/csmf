@@ -107,6 +107,62 @@ app.delete("/:id", async (c) => {
   return c.body(null, 204);
 });
 
+// Admin only. Sets (body.preview_image_block_id: string) or clears (null)
+// the post's preview image. Denormalizes the chosen block's url/alt_text
+// onto the post row so listings never need to join post_blocks just for a
+// thumbnail — validates the block belongs to this post and is type
+// `image` before doing so.
+app.patch("/:id/preview-image", async (c) => {
+  const supabase = createScopedClient(c.req.header("Authorization") ?? null);
+  const postId = c.req.param("id");
+
+  let body: Record<string, unknown>;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  const blockId = body.preview_image_block_id;
+  if (blockId !== null && typeof blockId !== "string") {
+    return c.json({ error: "preview_image_block_id must be a string or null" }, 400);
+  }
+
+  let updates: Record<string, unknown>;
+  if (blockId === null) {
+    updates = { preview_image_block_id: null, preview_image_url: null, preview_image_alt: null };
+  } else {
+    const { data: block, error: blockError } = await supabase
+      .from("post_blocks")
+      .select("type, content")
+      .eq("id", blockId)
+      .eq("post_id", postId)
+      .maybeSingle();
+    if (blockError) return c.json({ error: blockError.message }, statusForPostgresError(blockError.code));
+    if (!block || block.type !== "image") {
+      return c.json({ error: "preview_image_block_id must be an image block belonging to this post" }, 400);
+    }
+
+    const content = block.content as Record<string, unknown>;
+    updates = {
+      preview_image_block_id: blockId,
+      preview_image_url: typeof content.url === "string" ? content.url : null,
+      preview_image_alt: typeof content.alt_text === "string" ? content.alt_text : null,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("posts")
+    .update(updates)
+    .eq("id", postId)
+    .select()
+    .maybeSingle();
+
+  if (error) return c.json({ error: error.message }, statusForPostgresError(error.code));
+  if (!data) return c.json({ error: "Not found" }, 404);
+  return c.json({ post: data });
+});
+
 // Admin only (RLS rejects anon inserts with 42501). Appends a new block to
 // the post; pass `display_order` explicitly to control position, otherwise
 // it defaults to 0 (the caller/UI is expected to set it for anything after

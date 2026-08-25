@@ -33,6 +33,8 @@ tags:
     description: The `posts` Edge Function (`apps/supabase/functions/posts/`).
   - name: blocks
     description: The `blocks` Edge Function (`apps/supabase/functions/blocks/`).
+  - name: images
+    description: The `images` Edge Function (`apps/supabase/functions/images/`).
 paths:
   /posts:
     get:
@@ -231,17 +233,74 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /posts/{id}/preview-image:
+    patch:
+      tags: [posts]
+      summary: Set or clear a post's preview image
+      description: >
+        Admin only. `preview_image_block_id` must be the id of an `image`
+        block belonging to this post, or `null` to clear it. Denormalizes
+        that block's `url`/`alt_text` onto `posts.preview_image_url`/
+        `preview_image_alt` so listings never need to join `post_blocks`
+        just for a thumbnail.
+      operationId: setPostPreviewImage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - apikey: []
+          bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [preview_image_block_id]
+              properties:
+                preview_image_block_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  post:
+                    $ref: "#/components/schemas/Post"
+        "400":
+          description: >
+            preview_image_block_id isn't a string/null, or doesn't
+            reference an image block belonging to this post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found (or not visible to this caller — RLS)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /posts/{id}/blocks:
     post:
       tags: [posts, blocks]
       summary: Add a block to a post
       description: >
         Admin only — RLS rejects an anonymous caller's insert with 403.
-        `content` is validated against `type` with Zod; currently
+        `content` is validated against `type` with Zod:
         `heading`/`subheading`/`paragraph` (`{text}`), `code` (`{code,
-        language}`), and `separator` (`{}`) are accepted — `image` 400s with
-        "Unsupported block type" until its editor phase lands. Omit
-        `display_order` to default to 0.
+        language}`), `separator` (`{}`), or `image` (`{url, alt_text?,
+        caption?, source_text?, source_url?}` — get `url` from `POST
+        /images` first). Omit `display_order` to default to 0.
       operationId: createPostBlock
       parameters:
         - name: id
@@ -355,6 +414,56 @@ paths:
           description: Deleted
         "404":
           description: Not found (or not visible to this caller — RLS)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /images:
+    post:
+      tags: [images]
+      summary: Upload an image
+      description: >
+        Admin only — RLS on `storage.objects` rejects an anonymous upload.
+        Multipart body with a `file` field; the response's `url` is what an
+        `image` block's `content.url` should be set to (via `POST
+        /posts/{id}/blocks` or `PATCH /blocks/{id}`).
+      operationId: uploadImage
+      security:
+        - apikey: []
+          bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                  width:
+                    type: integer
+                  height:
+                    type: integer
+        "400":
+          description: Missing file, or not a valid image
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Not authorized (RLS)
           content:
             application/json:
               schema:
@@ -527,8 +636,8 @@ components:
           type: object
           description: >
             Must match `type`'s shape: `{text}` (heading/subheading/
-            paragraph), `{code, language}` (code), or `{}` (separator) —
-            `image` 400s until its editor phase lands.
+            paragraph), `{code, language}` (code), `{}` (separator), or
+            `{url, alt_text?, caption?, source_text?, source_url?}` (image).
         display_order:
           type: integer
     PostWithBlocks:
