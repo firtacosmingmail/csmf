@@ -2,7 +2,13 @@ import { apiFetch } from "./client";
 import type { Database } from "@csmf/supabase";
 
 export type AboutMe = Database["public"]["Tables"]["about_me"]["Row"];
-export type SocialLink = Database["public"]["Tables"]["social_links"]["Row"];
+
+export type AboutMeInput = {
+  headline?: string;
+  bio?: string;
+  avatar_url?: string;
+  contact_email?: string;
+};
 
 export async function getAboutMe(): Promise<AboutMe | null> {
   const res = await apiFetch("/about-me");
@@ -11,9 +17,19 @@ export async function getAboutMe(): Promise<AboutMe | null> {
   return about_me;
 }
 
-export async function getSocialLinks(): Promise<SocialLink[]> {
-  const res = await apiFetch("/about-me/social-links");
-  if (!res.ok) throw new Error(`Failed to fetch social links: ${res.status}`);
-  const { social_links } = await res.json();
-  return social_links;
+// PUT upserts, so this works for both the first-ever save and later edits
+// — the admin form doesn't need to know which case it's in.
+export async function updateAboutMe(data: AboutMeInput, accessToken: string): Promise<AboutMe> {
+  const res = await apiFetch("/about-me", {
+    method: "PUT",
+    accessToken,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Failed to update about_me: ${res.status}`);
+  }
+  const { about_me } = await res.json();
+  return about_me;
 }

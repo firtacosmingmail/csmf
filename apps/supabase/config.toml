@@ -458,3 +458,15 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/comments/deno.json"
 entrypoint = "./functions/comments/index.ts"
+
+[functions.social-links]
+enabled = true
+verify_jwt = false
+import_map = "./functions/social-links/deno.json"
+entrypoint = "./functions/social-links/index.ts"
+
+[functions.work-experience]
+enabled = true
+verify_jwt = false
+import_map = "./functions/work-experience/deno.json"
+entrypoint = "./functions/work-experience/index.ts"

@@ -51,6 +51,12 @@ export default async function AdminPage() {
         <Link href="/admin/comments" className="text-terracotta hover:underline">
           Manage comments
         </Link>
+        <Link href="/admin/about" className="text-terracotta hover:underline">
+          About me
+        </Link>
+        <Link href="/admin/experience" className="text-terracotta hover:underline">
+          Work experience
+        </Link>
       </nav>
 
       <form action={logout}>

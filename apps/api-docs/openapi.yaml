@@ -36,9 +36,13 @@ tags:
   - name: images
     description: The `images` Edge Function (`apps/supabase/functions/images/`).
   - name: about-me
+    description: The `about-me` Edge Function (`apps/supabase/functions/about-me/`).
+  - name: social-links
+    description: The `social-links` Edge Function (`apps/supabase/functions/social-links/`).
+  - name: work-experience
     description: >
-      The `about-me` Edge Function (`apps/supabase/functions/about-me/`).
-      Read-only for now — Phase 11 adds the admin write routes.
+      The `work-experience` Edge Function
+      (`apps/supabase/functions/work-experience/`).
   - name: comments
     description: >
       The `comments` Edge Function (`apps/supabase/functions/comments/`) —
@@ -506,9 +510,7 @@ paths:
     get:
       tags: [about-me]
       summary: Get the about_me singleton row
-      description: >
-        Public — RLS allows anon reads. `about_me` is `null` until a row
-        exists (hand-inserted for now; Phase 11 adds the admin UI).
+      description: Public — RLS allows anon reads. `about_me` is `null` until a row exists.
       operationId: getAboutMe
       security:
         - apikey: []
@@ -529,9 +531,48 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-  /about-me/social-links:
-    get:
+    put:
       tags: [about-me]
+      summary: Upsert the about_me singleton row
+      description: >
+        Admin only. Accepts any subset of headline/bio/avatar_url/
+        contact_email; upserts the id: true row, so it works whether or
+        not one already exists. Get avatar_url from `POST /images` first.
+      operationId: updateAboutMe
+      security:
+        - apikey: []
+          bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AboutMeInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  about_me:
+                    $ref: "#/components/schemas/AboutMe"
+        "400":
+          description: Invalid contact_email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Not authorized (RLS)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /social-links:
+    get:
+      tags: [social-links]
       summary: List social links
       description: Public — RLS allows anon reads. Ordered by display_order.
       operationId: listSocialLinks
@@ -551,6 +592,243 @@ paths:
                       $ref: "#/components/schemas/SocialLink"
         "500":
           description: Query error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags: [social-links]
+      summary: Create a social link
+      description: Admin only — RLS rejects an anonymous insert with 403.
+      operationId: createSocialLink
+      security:
+        - apikey: []
+          bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SocialLinkInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  social_link:
+                    $ref: "#/components/schemas/SocialLink"
+        "400":
+          description: Missing/invalid platform or url
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Not authorized (RLS)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /social-links/{id}:
+    patch:
+      tags: [social-links]
+      summary: Update a social link
+      description: Admin only. Accepts any subset of platform/url/display_order.
+      operationId: updateSocialLink
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - apikey: []
+          bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SocialLinkInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  social_link:
+                    $ref: "#/components/schemas/SocialLink"
+        "400":
+          description: Invalid field value, or an unknown field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found (or not visible to this caller — RLS)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      tags: [social-links]
+      summary: Delete a social link
+      description: Admin only.
+      operationId: deleteSocialLink
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - apikey: []
+          bearerAuth: []
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found (or not visible to this caller — RLS)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /work-experience:
+    get:
+      tags: [work-experience]
+      summary: List work experience entries
+      description: Public — RLS allows anon reads. Ordered by display_order.
+      operationId: listWorkExperience
+      security:
+        - apikey: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  work_experience:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/WorkExperience"
+        "500":
+          description: Query error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags: [work-experience]
+      summary: Create a work experience entry
+      description: Admin only — RLS rejects an anonymous insert with 403.
+      operationId: createWorkExperience
+      security:
+        - apikey: []
+          bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkExperienceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  work_experience:
+                    $ref: "#/components/schemas/WorkExperience"
+        "400":
+          description: Missing/invalid field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Not authorized (RLS)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /work-experience/{id}:
+    patch:
+      tags: [work-experience]
+      summary: Update a work experience entry
+      description: >
+        Admin only. Accepts any subset of company/role/description/
+        start_date/end_date/display_order — used both for field edits and
+        for drag-to-reorder (display_order only).
+      operationId: updateWorkExperience
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - apikey: []
+          bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkExperienceInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  work_experience:
+                    $ref: "#/components/schemas/WorkExperience"
+        "400":
+          description: Invalid field value, or an unknown field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found (or not visible to this caller — RLS)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      tags: [work-experience]
+      summary: Delete a work experience entry
+      description: Admin only.
+      operationId: deleteWorkExperience
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - apikey: []
+          bearerAuth: []
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found (or not visible to this caller — RLS)
           content:
             application/json:
               schema:
@@ -958,6 +1236,19 @@ components:
         updated_at:
           type: string
           format: date-time
+    AboutMeInput:
+      type: object
+      description: Any subset of these fields — PUT upserts, so partial updates work.
+      properties:
+        headline:
+          type: string
+        bio:
+          type: string
+          description: HTML from the admin bio's rich text editor.
+        avatar_url:
+          type: string
+        contact_email:
+          type: string
     SocialLink:
       type: object
       properties:
@@ -976,6 +1267,70 @@ components:
         updated_at:
           type: string
           format: date-time
+    SocialLinkInput:
+      type: object
+      description: >
+        POST requires platform and url; PATCH accepts any subset of
+        platform/url/display_order.
+      properties:
+        platform:
+          type: string
+        url:
+          type: string
+        display_order:
+          type: integer
+    WorkExperience:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        company:
+          type: string
+        role:
+          type: string
+        description:
+          type: string
+          nullable: true
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        end_date:
+          type: string
+          format: date
+          nullable: true
+          description: Null for an ongoing role.
+        display_order:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    WorkExperienceInput:
+      type: object
+      description: >
+        POST requires company and role; PATCH accepts any subset of
+        company/role/description/start_date/end_date/display_order.
+      properties:
+        company:
+          type: string
+        role:
+          type: string
+        description:
+          type: string
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        display_order:
+          type: integer
     Comment:
       type: object
       properties:
