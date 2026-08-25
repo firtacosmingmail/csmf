@@ -1,19 +1,29 @@
 @import "tailwindcss";
 
+/* Dark theme (FLE-46) — supersedes the earlier warm off-white/terracotta
+   palette. Every component already styles itself through these token
+   names (bg-paper, text-ink, border-border, text-terracotta, …) rather
+   than raw Tailwind colors, so redefining the values here re-skins the
+   whole site — public pages and /admin alike — without touching
+   component files. --color-cloud-500/300 are new: subtle layered-depth
+   tones for the wavy SVG banner/footer accents, not used anywhere else. */
 @theme {
-  --color-paper: #faf6f0;
-  --color-paper-raised: #ffffff;
-  --color-ink: #2a221b;
-  --color-ink-muted: #6b5f52;
-  --color-border: #e6dccd;
-  --color-terracotta: #bc5b3a;
-  --color-terracotta-hover: #a34e30;
+  --color-paper: #0a0a0a;
+  --color-paper-raised: #161514;
+  --color-ink: #f2efe9;
+  --color-ink-muted: #9b958a;
+  --color-border: #2a2826;
+  --color-terracotta: #e0916b;
+  --color-terracotta-hover: #ec9f7a;
+  --color-cloud-500: #1c1a18;
+  --color-cloud-300: #232120;
 }
 
 @theme inline {
   --font-serif: var(--font-newsreader);
   --font-sans: var(--font-source-sans);
   --font-mono: var(--font-jetbrains-mono);
+  --font-hand: var(--font-caveat);
 }
 
 body {
