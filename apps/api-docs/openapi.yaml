@@ -549,6 +549,82 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /posts/{id}/comments:
+    get:
+      tags: [posts]
+      summary: List a post's approved comments
+      description: Public. Approved only, newest-first — RLS backs this up too.
+      operationId: listPostComments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - apikey: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Comment"
+        "500":
+          description: Query error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags: [posts]
+      summary: Submit a comment
+      description: >
+        Public. Always inserted as `status: "pending"` — a spoofed `status`
+        field in the body 400s (the schema doesn't accept it), and RLS's
+        own with-check independently pins public inserts to pending too.
+        The response echoes the submitted fields rather than reading the
+        row back (RLS's SELECT policy only allows `approved`, so a
+        `pending` row can't be read back right after inserting it) — no
+        `id`/`created_at` in the response.
+      operationId: createPostComment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - apikey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comment:
+                    $ref: "#/components/schemas/Comment"
+        "400":
+          description: Missing/invalid author_name, author_email, or body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /hello:
     get:
       tags: [hello]
@@ -772,6 +848,39 @@ components:
         updated_at:
           type: string
           format: date-time
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        post_id:
+          type: string
+          format: uuid
+        author_name:
+          type: string
+        author_email:
+          type: string
+          nullable: true
+        body:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        created_at:
+          type: string
+          format: date-time
+    CommentInput:
+      type: object
+      required: [author_name, body]
+      properties:
+        author_name:
+          type: string
+        author_email:
+          type: string
+          description: Optional; must be a valid email if given.
+        body:
+          type: string
     Error:
       type: object
       properties:

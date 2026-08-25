@@ -3,6 +3,7 @@ import { createScopedClient } from "../_shared/client.ts";
 import { pickFields, statusForPostgresError } from "../_shared/http.ts";
 import { validateBlockContent } from "../_shared/blocks.ts";
 import { paginationRange } from "../_shared/pagination.ts";
+import { validateCommentInput } from "../_shared/comments.ts";
 
 const app = new Hono().basePath("/posts");
 
@@ -230,6 +231,61 @@ app.post("/:id/blocks", async (c) => {
   }
 
   return c.json({ block: data }, 201);
+});
+
+// Public: approved comments only, newest-first. RLS backs this up too
+// (the "public read approved comments" policy), but the handler filters
+// explicitly rather than relying solely on it.
+app.get("/:id/comments", async (c) => {
+  const supabase = createScopedClient(c.req.header("Authorization") ?? null);
+  const postId = c.req.param("id");
+
+  const { data, error } = await supabase
+    .from("comments")
+    .select("*")
+    .eq("post_id", postId)
+    .eq("status", "approved")
+    .order("created_at", { ascending: false });
+
+  if (error) return c.json({ error: error.message }, statusForPostgresError(error.code));
+  return c.json({ comments: data });
+});
+
+// Public. Always inserts as `pending` — the request body's own shape
+// (validateCommentInput has no `status` field, `.strict()`) means a
+// spoofed `status: "approved"` 400s here before ever reaching the insert;
+// RLS's with-check on the public insert policy backs this up independently.
+app.post("/:id/comments", async (c) => {
+  const supabase = createScopedClient(c.req.header("Authorization") ?? null);
+  const postId = c.req.param("id");
+
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  const validated = validateCommentInput(body);
+  if (!validated.success) return c.json({ error: validated.error }, 400);
+
+  // No .select() here: Postgres's RLS applies the table's SELECT policy to
+  // an INSERT's RETURNING clause too, and "public read approved comments"
+  // only allows status = 'approved' — a plain read-back of the row we just
+  // inserted as 'pending' would itself violate RLS. The response echoes
+  // the (validated) input instead of a DB round-trip; the visitor doesn't
+  // need id/created_at for the "awaiting approval" message.
+  const comment = {
+    post_id: postId,
+    author_name: validated.data.author_name,
+    author_email: validated.data.author_email ?? null,
+    body: validated.data.body,
+    status: "pending",
+  };
+  const { error } = await supabase.from("comments").insert(comment);
+
+  if (error) return c.json({ error: error.message }, statusForPostgresError(error.code));
+  return c.json({ comment }, 201);
 });
 
 Deno.serve(app.fetch);
