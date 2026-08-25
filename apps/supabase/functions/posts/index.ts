@@ -235,16 +235,19 @@ app.post("/:id/blocks", async (c) => {
 
 // Public: approved comments only, newest-first. RLS backs this up too
 // (the "public read approved comments" policy), but the handler filters
-// explicitly rather than relying solely on it.
+// explicitly rather than relying solely on it. ?status= (admin use) shows
+// a different subset — RLS still limits an anon caller to approved rows
+// regardless of what they pass here.
 app.get("/:id/comments", async (c) => {
   const supabase = createScopedClient(c.req.header("Authorization") ?? null);
   const postId = c.req.param("id");
+  const status = c.req.query("status") ?? "approved";
 
   const { data, error } = await supabase
     .from("comments")
     .select("*")
     .eq("post_id", postId)
-    .eq("status", "approved")
+    .eq("status", status)
     .order("created_at", { ascending: false });
 
   if (error) return c.json({ error: error.message }, statusForPostgresError(error.code));

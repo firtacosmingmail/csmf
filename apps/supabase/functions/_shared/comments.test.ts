@@ -1,5 +1,5 @@
 import { assertEquals } from "jsr:@std/assert@1";
-import { validateCommentInput } from "./comments.ts";
+import { validateCommentInput, isValidCommentStatus } from "./comments.ts";
 
 Deno.test("validateCommentInput accepts a valid comment without an email", () => {
   const result = validateCommentInput({ author_name: "Jane", body: "Great post!" });
@@ -37,4 +37,17 @@ Deno.test("validateCommentInput rejects a malformed email", () => {
 Deno.test("validateCommentInput rejects a spoofed status field", () => {
   const result = validateCommentInput({ author_name: "Jane", body: "Nice.", status: "approved" });
   assertEquals(result.success, false);
+});
+
+Deno.test("isValidCommentStatus accepts pending/approved/rejected", () => {
+  assertEquals(isValidCommentStatus("pending"), true);
+  assertEquals(isValidCommentStatus("approved"), true);
+  assertEquals(isValidCommentStatus("rejected"), true);
+});
+
+Deno.test("isValidCommentStatus rejects anything else", () => {
+  assertEquals(isValidCommentStatus("deleted"), false);
+  assertEquals(isValidCommentStatus(""), false);
+  assertEquals(isValidCommentStatus(undefined), false);
+  assertEquals(isValidCommentStatus(123), false);
 });

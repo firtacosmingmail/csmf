@@ -452,3 +452,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/about-me/deno.json"
 entrypoint = "./functions/about-me/index.ts"
+
+[functions.comments]
+enabled = true
+verify_jwt = false
+import_map = "./functions/comments/deno.json"
+entrypoint = "./functions/comments/index.ts"

@@ -23,3 +23,10 @@ export function validateCommentInput(
   }
   return { success: true, data: result.data };
 }
+
+export const COMMENT_STATUSES = ["pending", "approved", "rejected"] as const;
+export type CommentStatus = (typeof COMMENT_STATUSES)[number];
+
+export function isValidCommentStatus(value: unknown): value is CommentStatus {
+  return typeof value === "string" && (COMMENT_STATUSES as readonly string[]).includes(value);
+}

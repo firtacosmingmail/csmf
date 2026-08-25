@@ -39,6 +39,12 @@ tags:
     description: >
       The `about-me` Edge Function (`apps/supabase/functions/about-me/`).
       Read-only for now — Phase 11 adds the admin write routes.
+  - name: comments
+    description: >
+      The `comments` Edge Function (`apps/supabase/functions/comments/`) —
+      the cross-post admin moderation queue. Public submission and a
+      single post's approved comments are under `posts` instead (`GET`/
+      `POST /posts/{id}/comments`).
 paths:
   /posts:
     get:
@@ -552,8 +558,12 @@ paths:
   /posts/{id}/comments:
     get:
       tags: [posts]
-      summary: List a post's approved comments
-      description: Public. Approved only, newest-first — RLS backs this up too.
+      summary: List a post's comments
+      description: >
+        Newest-first. Defaults to approved only (public use) — RLS backs
+        that up too. `?status=` (admin use) shows a different subset; an
+        anon caller still only ever gets approved rows back regardless of
+        what they pass, since RLS doesn't key off this param.
       operationId: listPostComments
       parameters:
         - name: id
@@ -562,8 +572,16 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+            default: approved
       security:
         - apikey: []
+        - apikey: []
+          bearerAuth: []
       responses:
         "200":
           description: OK
@@ -621,6 +639,116 @@ paths:
                     $ref: "#/components/schemas/Comment"
         "400":
           description: Missing/invalid author_name, author_email, or body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /comments:
+    get:
+      tags: [comments]
+      summary: Cross-post moderation queue
+      description: >
+        Admin only in practice — RLS's "public read approved comments"
+        limits an anon caller to approved rows regardless of `?status=`.
+        Embeds each comment's post (title/slug) so the moderation UI can
+        show which post it's on in one call.
+      operationId: listComments
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+      security:
+        - apikey: []
+          bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CommentWithPost"
+        "500":
+          description: Query error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /comments/{id}:
+    patch:
+      tags: [comments]
+      summary: Moderate a comment
+      description: Admin only. Sets status to pending, approved, or rejected.
+      operationId: moderateComment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - apikey: []
+          bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [pending, approved, rejected]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comment:
+                    $ref: "#/components/schemas/Comment"
+        "400":
+          description: Missing/invalid status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found (or not visible to this caller — RLS)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      tags: [comments]
+      summary: Delete a comment
+      description: Admin only.
+      operationId: deleteComment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - apikey: []
+          bearerAuth: []
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found (or not visible to this caller — RLS)
           content:
             application/json:
               schema:
@@ -870,6 +998,19 @@ components:
         created_at:
           type: string
           format: date-time
+    CommentWithPost:
+      allOf:
+        - $ref: "#/components/schemas/Comment"
+        - type: object
+          properties:
+            posts:
+              type: object
+              description: Embedded via the post_id foreign key.
+              properties:
+                title:
+                  type: string
+                slug:
+                  type: string
     CommentInput:
       type: object
       required: [author_name, body]
