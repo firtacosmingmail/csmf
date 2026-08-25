@@ -245,6 +245,51 @@ describe("BlockEditor", () => {
     });
   });
 
+  it("the first inserted image is auto-selected as the preview image locally, without a separate API call", async () => {
+    const user = userEvent.setup();
+    vi.mocked(uploadImageAction).mockResolvedValue({ url: "https://example.com/x.png", width: 10, height: 10 });
+    vi.mocked(createBlockAction).mockResolvedValue(
+      makeBlock({ id: "new-image", type: "image", content: { url: "https://example.com/x.png" }, display_order: 1 }),
+    );
+
+    render(<BlockEditor postId="post-1" initialBlocks={[makeBlock({ id: "block-1" })]} title="Title" subtitle={null} initialPreviewImageBlockId={null} />);
+
+    const file = new File(["fake"], "photo.png", { type: "image/png" });
+    await user.upload(screen.getAllByLabelText("Upload image")[0], file);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Selected preview image")).toBeInTheDocument();
+    });
+    expect(setPreviewImageAction).not.toHaveBeenCalled();
+  });
+
+  it("does not override an already-selected preview image when another image is inserted", async () => {
+    const user = userEvent.setup();
+    vi.mocked(uploadImageAction).mockResolvedValue({ url: "https://example.com/y.png", width: 10, height: 10 });
+    vi.mocked(createBlockAction).mockResolvedValue(
+      makeBlock({ id: "new-image", type: "image", content: { url: "https://example.com/y.png" }, display_order: 1 }),
+    );
+
+    render(
+      <BlockEditor
+        postId="post-1"
+        initialBlocks={[makeBlock({ id: "img-1", type: "image", content: { url: "https://example.com/a.png" } })]}
+        title="Title"
+        subtitle={null}
+        initialPreviewImageBlockId="img-1"
+      />,
+    );
+
+    const file = new File(["fake"], "photo.png", { type: "image/png" });
+    await user.upload(screen.getAllByLabelText("Upload image")[0], file);
+
+    await waitFor(() => {
+      expect(createBlockAction).toHaveBeenCalled();
+    });
+    const selected = screen.getAllByLabelText("Selected preview image");
+    expect(selected).toHaveLength(1);
+  });
+
   it("selecting a preview image calls setPreviewImageAction and shows it as selected", async () => {
     const user = userEvent.setup();
     vi.mocked(setPreviewImageAction).mockResolvedValue({} as Awaited<ReturnType<typeof setPreviewImageAction>>);

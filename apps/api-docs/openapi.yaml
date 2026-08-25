@@ -35,6 +35,10 @@ tags:
     description: The `blocks` Edge Function (`apps/supabase/functions/blocks/`).
   - name: images
     description: The `images` Edge Function (`apps/supabase/functions/images/`).
+  - name: about-me
+    description: >
+      The `about-me` Edge Function (`apps/supabase/functions/about-me/`).
+      Read-only for now — Phase 11 adds the admin write routes.
 paths:
   /posts:
     get:
@@ -43,7 +47,10 @@ paths:
       description: >
         RLS-scoped: anonymous callers only ever see published posts,
         regardless of `?status=`; an authenticated admin session sees
-        everything, optionally filtered by `?status=` or a single `?id=`.
+        everything, optionally filtered by `?status=`, `?pinned=`, or a
+        single `?id=`. Pass `?page=` (1-indexed; `?per_page=` defaults to
+        6) to paginate — the response then includes `total`; omit it for
+        the unpaginated admin list behavior.
       operationId: listPosts
       parameters:
         - name: status
@@ -56,6 +63,21 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: pinned
+          in: query
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 6
       security:
         - apikey: []
         - apikey: []
@@ -72,6 +94,9 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Post"
+                  total:
+                    type: integer
+                    description: Only present when `?page=` was given.
         "500":
           description: Query error
           content:
@@ -300,7 +325,10 @@ paths:
         `heading`/`subheading`/`paragraph` (`{text}`), `code` (`{code,
         language}`), `separator` (`{}`), or `image` (`{url, alt_text?,
         caption?, source_text?, source_url?}` — get `url` from `POST
-        /images` first). Omit `display_order` to default to 0.
+        /images` first). Omit `display_order` to default to 0. The first
+        `image` block added to a post automatically becomes its preview
+        image (only if one isn't already set — never overrides an explicit
+        `PATCH /posts/{id}/preview-image`).
       operationId: createPostBlock
       parameters:
         - name: id
@@ -464,6 +492,59 @@ paths:
                 $ref: "#/components/schemas/Error"
         "403":
           description: Not authorized (RLS)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /about-me:
+    get:
+      tags: [about-me]
+      summary: Get the about_me singleton row
+      description: >
+        Public — RLS allows anon reads. `about_me` is `null` until a row
+        exists (hand-inserted for now; Phase 11 adds the admin UI).
+      operationId: getAboutMe
+      security:
+        - apikey: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  about_me:
+                    $ref: "#/components/schemas/AboutMe"
+                    nullable: true
+        "500":
+          description: Query error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /about-me/social-links:
+    get:
+      tags: [about-me]
+      summary: List social links
+      description: Public — RLS allows anon reads. Ordered by display_order.
+      operationId: listSocialLinks
+      security:
+        - apikey: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  social_links:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SocialLink"
+        "500":
+          description: Query error
           content:
             application/json:
               schema:
@@ -649,6 +730,48 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/PostBlock"
+    AboutMe:
+      type: object
+      properties:
+        id:
+          type: boolean
+          description: Always `true` — singleton row.
+        headline:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        avatar_url:
+          type: string
+          nullable: true
+        contact_email:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    SocialLink:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        platform:
+          type: string
+        url:
+          type: string
+        display_order:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     Error:
       type: object
       properties:

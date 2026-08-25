@@ -39,6 +39,23 @@ export async function listPosts(opts: { status?: string; accessToken?: string } 
   return unwrapOrThrow<Post[]>(res, "posts");
 }
 
+// Public listing for the landing page — paginated, unlike listPosts (which
+// the admin posts list uses unpaginated). `total` reflects the full match
+// count regardless of page size, for computing total pages.
+export async function listPublishedPosts(
+  opts: { pinned?: boolean; page?: number; perPage?: number } = {},
+): Promise<{ posts: Post[]; total: number }> {
+  const params = new URLSearchParams({ status: "published" });
+  if (opts.pinned !== undefined) params.set("pinned", String(opts.pinned));
+  if (opts.page) params.set("page", String(opts.page));
+  if (opts.perPage) params.set("per_page", String(opts.perPage));
+
+  const res = await apiFetch(`/posts?${params}`);
+  if (!res.ok) throw new Error(`Failed to fetch posts: ${res.status}`);
+  const body = await res.json();
+  return { posts: body.posts, total: body.total ?? body.posts.length };
+}
+
 export async function getPostById(id: string, accessToken?: string): Promise<Post | null> {
   const res = await apiFetch(`/posts?id=${encodeURIComponent(id)}`, { accessToken });
   const posts = await unwrapOrThrow<Post[]>(res, "posts");

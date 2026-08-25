@@ -88,6 +88,10 @@ export function BlockEditor({
       content: { url },
       display_order: afterIndex + 1,
     });
+    // Mirrors the backend: the first image block added auto-becomes the
+    // preview image (POST /posts/:id/blocks does this server-side already
+    // — this just keeps local state in sync without a refresh).
+    setPreviewImageBlockId((current) => current ?? block.id);
     const next = [...blocks];
     next.splice(afterIndex + 1, 0, block);
     await persistOrder(next, blocks);

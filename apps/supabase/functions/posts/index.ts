@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { createScopedClient } from "../_shared/client.ts";
 import { pickFields, statusForPostgresError } from "../_shared/http.ts";
 import { validateBlockContent } from "../_shared/blocks.ts";
+import { paginationRange } from "../_shared/pagination.ts";
 
 const app = new Hono().basePath("/posts");
 
@@ -9,19 +10,32 @@ const WRITABLE_FIELDS = ["title", "subtitle", "slug", "status", "pinned"] as con
 
 // List posts. RLS scopes this per caller: anon only ever sees published
 // posts regardless of ?status=; an authenticated admin session sees
-// everything, optionally filtered by ?status= or a single ?id=.
+// everything, optionally filtered by ?status=, ?pinned=, or a single ?id=.
+// ?page= (1-indexed, with ?per_page=) paginates and adds a `total` count to
+// the response — omit it for the unpaginated admin list behavior.
 app.get("/", async (c) => {
   const supabase = createScopedClient(c.req.header("Authorization") ?? null);
   const status = c.req.query("status");
   const id = c.req.query("id");
+  const pinned = c.req.query("pinned");
+  const page = c.req.query("page");
 
-  let query = supabase.from("posts").select("*").order("created_at", { ascending: false });
+  let query = page
+    ? supabase.from("posts").select("*", { count: "exact" })
+    : supabase.from("posts").select("*");
+  query = query.order("created_at", { ascending: false });
   if (status) query = query.eq("status", status);
   if (id) query = query.eq("id", id);
+  if (pinned === "true") query = query.eq("pinned", true);
+  if (pinned === "false") query = query.eq("pinned", false);
+  if (page) {
+    const { from, to } = paginationRange(page, c.req.query("per_page"));
+    query = query.range(from, to);
+  }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) return c.json({ error: error.message }, statusForPostgresError(error.code));
-  return c.json({ posts: data });
+  return c.json({ posts: data, ...(page ? { total: count } : {}) });
 });
 
 // Public: a published post + its ordered blocks, in one call. RLS (via the
@@ -197,6 +211,24 @@ app.post("/:id/blocks", async (c) => {
     .single();
 
   if (error) return c.json({ error: error.message }, statusForPostgresError(error.code));
+
+  // First image block on a post becomes its preview image automatically —
+  // `preview_image_block_id is null` makes this a no-op once one's set,
+  // whether by this or a later explicit PATCH /posts/:id/preview-image, so
+  // it never clobbers an admin's own choice.
+  if (body.type === "image") {
+    const content = validated.data as { url: string; alt_text?: string };
+    await supabase
+      .from("posts")
+      .update({
+        preview_image_block_id: data.id,
+        preview_image_url: content.url,
+        preview_image_alt: content.alt_text ?? null,
+      })
+      .eq("id", postId)
+      .is("preview_image_block_id", null);
+  }
+
   return c.json({ block: data }, 201);
 });
 

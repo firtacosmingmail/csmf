@@ -27,9 +27,11 @@ function readPostInput(formData: FormData): PostInput {
 
 export async function createPostAction(formData: FormData) {
   const accessToken = await requireAccessToken();
-  await createPost(readPostInput(formData), accessToken);
+  const post = await createPost(readPostInput(formData), accessToken);
   revalidatePath("/admin/posts");
-  redirect("/admin/posts");
+  // Straight into the block editor — a freshly created post has no
+  // content yet, and that's the very next thing an admin wants to add.
+  redirect(`/admin/posts/${post.id}/edit`);
 }
 
 export async function updatePostAction(id: string, formData: FormData) {
