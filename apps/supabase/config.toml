@@ -470,3 +470,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/work-experience/deno.json"
 entrypoint = "./functions/work-experience/index.ts"
+
+[functions.newsletter]
+enabled = true
+verify_jwt = false
+import_map = "./functions/newsletter/deno.json"
+entrypoint = "./functions/newsletter/index.ts"

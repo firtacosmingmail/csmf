@@ -43,6 +43,12 @@ tags:
     description: >
       The `work-experience` Edge Function
       (`apps/supabase/functions/work-experience/`).
+  - name: newsletter
+    description: >
+      The `newsletter` Edge Function
+      (`apps/supabase/functions/newsletter/`). v1 is capture-only — no
+      admin routes yet, and no send-on-publish (that needs an email
+      provider, still undecided).
   - name: comments
     description: >
       The `comments` Edge Function (`apps/supabase/functions/comments/`) —
@@ -1027,6 +1033,45 @@ paths:
           description: Deleted
         "404":
           description: Not found (or not visible to this caller — RLS)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /newsletter/subscribe:
+    post:
+      tags: [newsletter]
+      summary: Subscribe to the newsletter
+      description: >
+        Public. Always inserted as status='active' — a spoofed status 400s
+        (the schema doesn't accept it), backed independently by RLS's own
+        with-check. A duplicate email is treated as a no-op success
+        (avoids leaking whether an address is already subscribed) rather
+        than an error.
+      operationId: subscribeToNewsletter
+      security:
+        - apikey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+      responses:
+        "201":
+          description: Subscribed (or already was)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        "400":
+          description: Missing/invalid email
           content:
             application/json:
               schema:

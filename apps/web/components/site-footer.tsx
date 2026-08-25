@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getSocialLinks } from "@/lib/api/social-links";
 import { WaveFooterBackground } from "./wave-footer-background";
+import { NewsletterForm } from "./newsletter-form";
 
 export async function SiteFooter() {
   const socialLinks = await getSocialLinks();
@@ -40,6 +41,11 @@ export async function SiteFooter() {
             ))}
           </div>
         )}
+
+        <div className="flex flex-col gap-2">
+          <p className="text-ink">Get an email when I publish something new.</p>
+          <NewsletterForm />
+        </div>
 
         <p>© {new Date().getFullYear()} Cosmin F</p>
       </div>
