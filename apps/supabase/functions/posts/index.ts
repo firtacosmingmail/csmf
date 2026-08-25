@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { createScopedClient } from "../_shared/client.ts";
 import { pickFields, statusForPostgresError } from "../_shared/http.ts";
+import { validateBlockContent } from "../_shared/blocks.ts";
 
 const app = new Hono().basePath("/posts");
 
@@ -104,6 +105,43 @@ app.delete("/:id", async (c) => {
   if (error) return c.json({ error: error.message }, statusForPostgresError(error.code));
   if (!data || data.length === 0) return c.json({ error: "Not found" }, 404);
   return c.body(null, 204);
+});
+
+// Admin only (RLS rejects anon inserts with 42501). Appends a new block to
+// the post; pass `display_order` explicitly to control position, otherwise
+// it defaults to 0 (the caller/UI is expected to set it for anything after
+// the first block).
+app.post("/:id/blocks", async (c) => {
+  const supabase = createScopedClient(c.req.header("Authorization") ?? null);
+  const postId = c.req.param("id");
+
+  let body: Record<string, unknown>;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  if (typeof body.type !== "string") {
+    return c.json({ error: "type is required" }, 400);
+  }
+
+  const validated = validateBlockContent(body.type, body.content ?? {});
+  if (!validated.success) return c.json({ error: validated.error }, 400);
+
+  const { data, error } = await supabase
+    .from("post_blocks")
+    .insert({
+      post_id: postId,
+      type: body.type,
+      content: validated.data,
+      ...(typeof body.display_order === "number" ? { display_order: body.display_order } : {}),
+    })
+    .select()
+    .single();
+
+  if (error) return c.json({ error: error.message }, statusForPostgresError(error.code));
+  return c.json({ block: data }, 201);
 });
 
 Deno.serve(app.fetch);

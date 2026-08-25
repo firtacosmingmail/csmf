@@ -22,8 +22,8 @@ async function unwrapOrThrow<T>(res: Response, key: string): Promise<T> {
   return body[key];
 }
 
-export async function getPostBySlug(slug: string): Promise<PostWithBlocks | null> {
-  const res = await apiFetch(`/posts/${encodeURIComponent(slug)}`);
+export async function getPostBySlug(slug: string, accessToken?: string): Promise<PostWithBlocks | null> {
+  const res = await apiFetch(`/posts/${encodeURIComponent(slug)}`, { accessToken });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Failed to fetch post "${slug}": ${res.status}`);
   const { post } = await res.json();

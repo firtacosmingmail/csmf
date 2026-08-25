@@ -18,12 +18,16 @@ function PostBlockView({ block }: { block: PostBlock }) {
   const content = block.content as Record<string, unknown>;
 
   switch (block.type) {
+    // content.text is HTML produced by the block editor's Tiptap instance
+    // (bold/italic/inline-code/link only — see components/block-editor/) —
+    // safe to render directly since only the authenticated admin ever
+    // writes it, never a visitor.
     case "heading":
-      return <h2 className="font-serif text-2xl text-ink">{String(content.text ?? "")}</h2>;
+      return <h2 className="font-serif text-2xl text-ink" dangerouslySetInnerHTML={{ __html: String(content.text ?? "") }} />;
     case "subheading":
-      return <h3 className="font-serif text-xl text-ink">{String(content.text ?? "")}</h3>;
+      return <h3 className="font-serif text-xl text-ink" dangerouslySetInnerHTML={{ __html: String(content.text ?? "") }} />;
     case "paragraph":
-      return <p className="font-sans text-ink">{String(content.text ?? "")}</p>;
+      return <p className="font-sans text-ink" dangerouslySetInnerHTML={{ __html: String(content.text ?? "") }} />;
     case "code":
       return (
         <pre className="overflow-x-auto rounded border border-border bg-paper-raised p-4 font-mono text-sm text-ink">
