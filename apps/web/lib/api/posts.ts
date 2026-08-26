@@ -1,10 +1,11 @@
 import { cache } from "react";
 import { apiFetch } from "./client";
 import type { Database } from "@csmf/supabase";
+import type { Locale } from "@/i18n/locales";
 
 export type Post = Database["public"]["Tables"]["posts"]["Row"];
 type PostBlock = Database["public"]["Tables"]["post_blocks"]["Row"];
-export type PostWithBlocks = Post & { post_blocks: PostBlock[] };
+export type PostWithBlocks = Post & { post_blocks: PostBlock[]; translations: { locale: Locale; slug: string }[] };
 
 export type PostInput = {
   title: string;
@@ -12,6 +13,10 @@ export type PostInput = {
   slug: string;
   status: "draft" | "published";
   pinned: boolean;
+  // Create-only: locale defaults to "en"; pass translation_group_id to
+  // link this post as the translation of an existing one.
+  locale?: Locale;
+  translation_group_id?: string;
 };
 
 async function unwrapOrThrow<T>(res: Response, key: string): Promise<T> {
@@ -24,19 +29,25 @@ async function unwrapOrThrow<T>(res: Response, key: string): Promise<T> {
 }
 
 // Wrapped in React's cache() so generateMetadata and the page component
-// (both called with the same slug during one request) share a single
-// fetch instead of hitting the API twice.
-export const getPostBySlug = cache(async (slug: string, accessToken?: string): Promise<PostWithBlocks | null> => {
-  const res = await apiFetch(`/posts/${encodeURIComponent(slug)}`, { accessToken });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`Failed to fetch post "${slug}": ${res.status}`);
-  const { post } = await res.json();
-  return post;
-});
+// (both called with the same slug/locale during one request) share a
+// single fetch instead of hitting the API twice. `locale` defaults to
+// "en" server-side if omitted — always pass it from a localized route.
+export const getPostBySlug = cache(
+  async (slug: string, locale: Locale, accessToken?: string): Promise<PostWithBlocks | null> => {
+    const res = await apiFetch(`/posts/${encodeURIComponent(slug)}?locale=${locale}`, { accessToken });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Failed to fetch post "${slug}": ${res.status}`);
+    const { post, translations } = await res.json();
+    return { ...post, translations };
+  },
+);
 
-export async function listPosts(opts: { status?: string; accessToken?: string } = {}): Promise<Post[]> {
+export async function listPosts(
+  opts: { status?: string; locale?: Locale; accessToken?: string } = {},
+): Promise<Post[]> {
   const params = new URLSearchParams();
   if (opts.status) params.set("status", opts.status);
+  if (opts.locale) params.set("locale", opts.locale);
   const res = await apiFetch(`/posts${params.size ? `?${params}` : ""}`, {
     accessToken: opts.accessToken,
   });
@@ -47,9 +58,9 @@ export async function listPosts(opts: { status?: string; accessToken?: string } 
 // the admin posts list uses unpaginated). `total` reflects the full match
 // count regardless of page size, for computing total pages.
 export async function listPublishedPosts(
-  opts: { pinned?: boolean; page?: number; perPage?: number } = {},
+  opts: { locale: Locale; pinned?: boolean; page?: number; perPage?: number },
 ): Promise<{ posts: Post[]; total: number }> {
-  const params = new URLSearchParams({ status: "published" });
+  const params = new URLSearchParams({ status: "published", locale: opts.locale });
   if (opts.pinned !== undefined) params.set("pinned", String(opts.pinned));
   if (opts.page) params.set("page", String(opts.page));
   if (opts.perPage) params.set("per_page", String(opts.perPage));

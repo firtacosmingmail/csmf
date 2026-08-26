@@ -1,9 +1,10 @@
 import Link from "next/link";
 import type { Post } from "@/lib/api/posts";
+import type { Locale } from "@/i18n/locales";
 
-export function PostCard({ post }: { post: Post }) {
+export function PostCard({ post, lang }: { post: Post; lang: Locale }) {
   return (
-    <Link href={`/blog/${post.slug}`} className="group flex flex-col gap-2">
+    <Link href={`/${lang}/blog/${post.slug}`} className="group flex flex-col gap-2">
       {post.preview_image_url && (
         // eslint-disable-next-line @next/next/no-img-element -- arbitrary uploaded image URL
         <img
@@ -17,7 +18,7 @@ export function PostCard({ post }: { post: Post }) {
         {post.subtitle && <p className="font-sans text-sm text-ink-muted">{post.subtitle}</p>}
         {post.published_at && (
           <time dateTime={post.published_at} className="font-sans text-xs text-ink-muted">
-            {new Date(post.published_at).toLocaleDateString()}
+            {new Date(post.published_at).toLocaleDateString(lang)}
           </time>
         )}
       </div>

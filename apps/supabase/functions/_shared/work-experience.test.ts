@@ -35,3 +35,18 @@ Deno.test("validateWorkExperienceUpdate rejects unknown fields", () => {
   const result = validateWorkExperienceUpdate({ location: "Remote" });
   assertEquals(result.success, false);
 });
+
+Deno.test("validateWorkExperienceInput accepts a locale and translation_group_id", () => {
+  const result = validateWorkExperienceInput({
+    company: "Acme",
+    role: "Engineer",
+    locale: "ro",
+    translation_group_id: "550e8400-e29b-41d4-a716-446655440000",
+  });
+  assertEquals(result.success, true);
+});
+
+Deno.test("validateWorkExperienceInput rejects an unsupported locale", () => {
+  const result = validateWorkExperienceInput({ company: "Acme", role: "Engineer", locale: "fr" });
+  assertEquals(result.success, false);
+});

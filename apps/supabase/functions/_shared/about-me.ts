@@ -1,10 +1,13 @@
 import { z } from "npm:zod@3";
+import { LOCALES } from "./locales.ts";
 
-// All optional: PUT /about-me accepts any subset of fields, same as
-// PATCH /posts/:id — unknown fields are ignored by pickFields, not
-// rejected, since this is admin-only and there's no spoofing concern
-// like comments' status field.
+// `locale` is required (it's the row's primary key now — one row per
+// locale); the rest stay optional: PUT /about-me accepts any subset of
+// them, same as PATCH /posts/:id — unknown fields are ignored by
+// pickFields, not rejected, since this is admin-only and there's no
+// spoofing concern like comments' status field.
 const aboutMeInputSchema = z.object({
+  locale: z.enum(LOCALES),
   headline: z.string().optional(),
   bio: z.string().optional(),
   avatar_url: z.string().optional(),

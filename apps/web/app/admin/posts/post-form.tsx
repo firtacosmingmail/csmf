@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { slugify } from "@/lib/slugify";
+import { locales, type Locale } from "@/i18n/locales";
+
+const LOCALE_LABEL: Record<Locale, string> = { en: "English", ro: "Română" };
 
 type PostFormValues = {
   title: string;
@@ -17,10 +20,16 @@ export function PostForm({
   action,
   defaultValues,
   submitLabel,
+  translation,
 }: {
   action: (formData: FormData) => void;
   defaultValues?: PostFormValues;
   submitLabel: string;
+  // Only set when creating a brand-new post (never on edit — a post's
+  // locale/group don't change after creation, see PostInput). Omit
+  // entirely for a standalone post; set `locale` to lock it (creating a
+  // translation of an existing post) instead of offering the picker.
+  translation?: { locale?: Locale; groupId?: string };
 }) {
   const [title, setTitle] = useState(defaultValues?.title ?? "");
   const [slug, setSlug] = useState(defaultValues?.slug ?? "");
@@ -28,6 +37,30 @@ export function PostForm({
 
   return (
     <form action={action} className="flex w-full max-w-xl flex-col gap-4">
+      {translation && (
+        <>
+          {translation.groupId && <input type="hidden" name="translation_group_id" value={translation.groupId} />}
+          {translation.locale ? (
+            <div className="flex flex-col gap-1 text-sm text-ink-muted">
+              Language
+              <input type="hidden" name="locale" value={translation.locale} />
+              <p className="text-ink">{LOCALE_LABEL[translation.locale]}</p>
+            </div>
+          ) : (
+            <label className="flex flex-col gap-1 text-sm text-ink-muted">
+              Language
+              <select name="locale" defaultValue="en" className="rounded border border-border bg-paper px-3 py-2 text-ink">
+                {locales.map((locale) => (
+                  <option key={locale} value={locale}>
+                    {LOCALE_LABEL[locale]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </>
+      )}
+
       <label className="flex flex-col gap-1 text-sm text-ink-muted">
         Title
         <input

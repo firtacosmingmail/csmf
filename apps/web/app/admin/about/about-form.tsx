@@ -11,24 +11,51 @@ import {
 } from "./actions";
 import type { AboutMe } from "@/lib/api/about-me";
 import type { SocialLink } from "@/lib/api/social-links";
+import { locales, type Locale } from "@/i18n/locales";
 
 const fieldClass = "rounded border border-border bg-paper px-3 py-2 text-ink";
+const LOCALE_LABEL: Record<Locale, string> = { en: "English", ro: "Română" };
 
+type Draft = { headline: string; contact_email: string; avatar_url: string };
+
+function draftFrom(aboutMe: AboutMe | null): Draft {
+  return {
+    headline: aboutMe?.headline ?? "",
+    contact_email: aboutMe?.contact_email ?? "",
+    avatar_url: aboutMe?.avatar_url ?? "",
+  };
+}
+
+// Each locale is its own row (see i18n migration) — the form edits one at
+// a time via the tabs below, independently of the other's content.
 export function AboutForm({
-  initialAboutMe,
+  initialAboutMeByLocale,
   initialSocialLinks,
 }: {
-  initialAboutMe: AboutMe | null;
+  initialAboutMeByLocale: AboutMe[];
   initialSocialLinks: SocialLink[];
 }) {
-  const [headline, setHeadline] = useState(initialAboutMe?.headline ?? "");
-  const [contactEmail, setContactEmail] = useState(initialAboutMe?.contact_email ?? "");
-  const [avatarUrl, setAvatarUrl] = useState(initialAboutMe?.avatar_url ?? "");
+  const byLocale = Object.fromEntries(
+    initialAboutMeByLocale.map((row) => [row.locale, row]),
+  ) as Partial<Record<Locale, AboutMe>>;
+
+  const [activeLocale, setActiveLocale] = useState<Locale>("en");
+  const [drafts, setDrafts] = useState<Record<Locale, Draft>>(() =>
+    Object.fromEntries(locales.map((l) => [l, draftFrom(byLocale[l] ?? null)])) as Record<Locale, Draft>,
+  );
+  const [initialBios] = useState<Record<Locale, string>>(() =>
+    Object.fromEntries(locales.map((l) => [l, byLocale[l]?.bio ?? ""])) as Record<Locale, string>,
+  );
   const [uploading, setUploading] = useState(false);
   const [links, setLinks] = useState(initialSocialLinks);
   const [newPlatform, setNewPlatform] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const draft = drafts[activeLocale];
+  function updateDraft(patch: Partial<Draft>) {
+    setDrafts((prev) => ({ ...prev, [activeLocale]: { ...prev[activeLocale], ...patch } }));
+  }
 
   // Imperative onClick/onBlur/onChange calls, not <form action>, so
   // errors here wouldn't otherwise reach the nearest error.tsx boundary.
@@ -44,14 +71,15 @@ export function AboutForm({
   function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    const locale = activeLocale;
     void guarded(async () => {
       setUploading(true);
       try {
         const formData = new FormData();
         formData.append("file", file);
         const { url } = await uploadAvatarAction(formData);
-        setAvatarUrl(url);
-        await updateAboutMeAction({ avatar_url: url });
+        updateDraft({ avatar_url: url });
+        await updateAboutMeAction({ locale, avatar_url: url });
       } finally {
         setUploading(false);
         e.target.value = "";
@@ -94,13 +122,30 @@ export function AboutForm({
         </div>
       )}
 
+      <div className="flex gap-2 border-b border-border">
+        {locales.map((locale) => (
+          <button
+            key={locale}
+            type="button"
+            onClick={() => setActiveLocale(locale)}
+            className={`px-3 py-2 text-sm ${
+              locale === activeLocale
+                ? "border-b-2 border-terracotta text-ink"
+                : "text-ink-muted hover:text-ink"
+            }`}
+          >
+            {LOCALE_LABEL[locale]}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm text-ink-muted">
           Headline
           <input
-            value={headline}
-            onChange={(e) => setHeadline(e.target.value)}
-            onBlur={() => void guarded(() => updateAboutMeAction({ headline }))}
+            value={draft.headline}
+            onChange={(e) => updateDraft({ headline: e.target.value })}
+            onBlur={() => void guarded(() => updateAboutMeAction({ locale: activeLocale, headline: draft.headline }))}
             className={fieldClass}
           />
         </label>
@@ -108,9 +153,10 @@ export function AboutForm({
         <div className="flex flex-col gap-1 text-sm text-ink-muted">
           Bio
           <RichTextEditor
-            initialHtml={initialAboutMe?.bio ?? ""}
+            key={activeLocale}
+            initialHtml={initialBios[activeLocale]}
             placeholder="Write a short bio…"
-            onSave={(html) => void guarded(() => updateAboutMeAction({ bio: html }))}
+            onSave={(html) => void guarded(() => updateAboutMeAction({ locale: activeLocale, bio: html }))}
           />
         </div>
 
@@ -118,9 +164,11 @@ export function AboutForm({
           Contact email
           <input
             type="email"
-            value={contactEmail}
-            onChange={(e) => setContactEmail(e.target.value)}
-            onBlur={() => void guarded(() => updateAboutMeAction({ contact_email: contactEmail }))}
+            value={draft.contact_email}
+            onChange={(e) => updateDraft({ contact_email: e.target.value })}
+            onBlur={() =>
+              void guarded(() => updateAboutMeAction({ locale: activeLocale, contact_email: draft.contact_email }))
+            }
             className={fieldClass}
           />
         </label>
@@ -128,9 +176,9 @@ export function AboutForm({
         <div className="flex flex-col gap-1 text-sm text-ink-muted">
           Avatar
           <div className="flex items-center gap-3">
-            {avatarUrl && (
+            {draft.avatar_url && (
               // eslint-disable-next-line @next/next/no-img-element -- arbitrary uploaded image URL
-              <img src={avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover" />
+              <img src={draft.avatar_url} alt="" className="h-16 w-16 rounded-full object-cover" />
             )}
             <input
               type="file"
@@ -145,6 +193,7 @@ export function AboutForm({
 
       <div className="flex flex-col gap-3">
         <h2 className="font-serif text-xl text-ink">Social links</h2>
+        <p className="text-xs text-ink-muted">Shared across languages — not tied to a locale.</p>
         {links.length === 0 && <p className="text-sm text-ink-muted">No social links yet.</p>}
         {links.map((link) => (
           <div key={link.id} className="flex items-center gap-2">

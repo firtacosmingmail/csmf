@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CommentForm } from "./comment-form";
 import { createCommentAction } from "./comment-actions";
+import { dictionary } from "@/i18n/dictionaries/en";
 
 vi.mock("./comment-actions", () => ({
   createCommentAction: vi.fn(),
@@ -23,7 +24,7 @@ describe("CommentForm", () => {
       status: "pending",
     });
 
-    render(<CommentForm postId="post-1" />);
+    render(<CommentForm postId="post-1" dict={dictionary.comments} />);
 
     await user.type(screen.getByLabelText("Name"), "Jane");
     await user.type(screen.getByLabelText("Email (optional)"), "jane@example.com");
@@ -50,7 +51,7 @@ describe("CommentForm", () => {
       status: "pending",
     });
 
-    render(<CommentForm postId="post-1" />);
+    render(<CommentForm postId="post-1" dict={dictionary.comments} />);
 
     await user.type(screen.getByLabelText("Name"), "Jane");
     await user.type(screen.getByLabelText("Comment"), "Nice.");
@@ -69,7 +70,7 @@ describe("CommentForm", () => {
     const user = userEvent.setup();
     vi.mocked(createCommentAction).mockRejectedValue(new Error("body is required"));
 
-    render(<CommentForm postId="post-1" />);
+    render(<CommentForm postId="post-1" dict={dictionary.comments} />);
 
     await user.type(screen.getByLabelText("Name"), "Jane");
     await user.type(screen.getByLabelText("Comment"), "Nice.");

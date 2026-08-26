@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { createCommentAction } from "./comment-actions";
+import type { Dictionary } from "@/i18n/dictionaries";
 
-export function CommentForm({ postId }: { postId: string }) {
+export function CommentForm({ postId, dict }: { postId: string; dict: Dictionary["comments"] }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [body, setBody] = useState("");
@@ -26,20 +27,20 @@ export function CommentForm({ postId }: { postId: string }) {
       setEmail("");
       setBody("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to submit comment");
+      setError(err instanceof Error ? err.message : dict.errorFallback);
     } finally {
       setSubmitting(false);
     }
   }
 
   if (submitted) {
-    return <p className="font-sans text-ink-muted">Thanks! Your comment is awaiting approval.</p>;
+    return <p className="font-sans text-ink-muted">{dict.thanksPending}</p>;
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <label className="flex flex-col gap-1 text-sm text-ink-muted">
-        Name
+        {dict.name}
         <input
           required
           value={name}
@@ -48,7 +49,7 @@ export function CommentForm({ postId }: { postId: string }) {
         />
       </label>
       <label className="flex flex-col gap-1 text-sm text-ink-muted">
-        Email (optional)
+        {dict.emailOptional}
         <input
           type="email"
           value={email}
@@ -57,7 +58,7 @@ export function CommentForm({ postId }: { postId: string }) {
         />
       </label>
       <label className="flex flex-col gap-1 text-sm text-ink-muted">
-        Comment
+        {dict.comment}
         <textarea
           required
           rows={4}
@@ -72,7 +73,7 @@ export function CommentForm({ postId }: { postId: string }) {
         disabled={submitting}
         className="self-start rounded bg-terracotta px-4 py-2 font-sans text-paper-raised transition-colors hover:bg-terracotta-hover disabled:opacity-50"
       >
-        {submitting ? "Submitting…" : "Submit comment"}
+        {submitting ? dict.submitting : dict.submit}
       </button>
     </form>
   );

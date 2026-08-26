@@ -20,6 +20,8 @@ function makeItem(overrides: Partial<WorkExperience>): WorkExperience {
     start_date: "2020-01-01",
     end_date: null,
     display_order: 0,
+    locale: "en",
+    translation_group_id: "11111111-1111-1111-1111-111111111111",
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...overrides,
@@ -50,7 +52,12 @@ describe("ExperienceEditor", () => {
     await user.click(screen.getByText("+ Add"));
 
     await waitFor(() => {
-      expect(createExperienceAction).toHaveBeenCalledWith({ company: "Globex", role: "Lead", display_order: 0 });
+      expect(createExperienceAction).toHaveBeenCalledWith({
+        company: "Globex",
+        role: "Lead",
+        display_order: 0,
+        locale: "en",
+      });
     });
     expect(await screen.findByDisplayValue("Globex")).toBeInTheDocument();
   });
@@ -86,6 +93,33 @@ describe("ExperienceEditor", () => {
   it("shows an empty state when there is no experience yet", () => {
     render(<ExperienceEditor initialExperience={[]} />);
     expect(screen.getByText("No experience yet — add your first entry below.")).toBeInTheDocument();
+  });
+
+  it("translating an entry creates it in the other locale, linked by translation_group_id", async () => {
+    const user = userEvent.setup();
+    vi.mocked(createExperienceAction).mockResolvedValue(
+      makeItem({ id: "exp-1-ro", locale: "ro", company: "Acme" }),
+    );
+
+    render(<ExperienceEditor initialExperience={[makeItem({})]} />);
+
+    await user.click(screen.getByText("+ Add Română translation"));
+
+    await waitFor(() => {
+      expect(createExperienceAction).toHaveBeenCalledWith({
+        company: "Acme",
+        role: "Engineer",
+        description: undefined,
+        start_date: "2020-01-01",
+        end_date: null,
+        display_order: 0,
+        locale: "ro",
+        translation_group_id: "11111111-1111-1111-1111-111111111111",
+      });
+    });
+
+    await user.click(screen.getByText("Română"));
+    expect(await screen.findByDisplayValue("Acme")).toBeInTheDocument();
   });
 
   it("shows a dismissible error banner when a mutation fails", async () => {

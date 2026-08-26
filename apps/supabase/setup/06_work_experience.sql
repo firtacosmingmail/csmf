@@ -9,6 +9,9 @@ create table work_experience (
   start_date date,
   end_date date,
   display_order integer not null default 0,
+  -- locale + translation_group_id (FLE i18n): see posts.
+  locale text not null default 'en' check (locale in ('en', 'ro')),
+  translation_group_id uuid not null default gen_random_uuid(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

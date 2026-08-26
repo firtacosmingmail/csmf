@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NewsletterForm } from "./newsletter-form";
 import { subscribeToNewsletterAction } from "@/app/newsletter-actions";
+import { dictionary } from "@/i18n/dictionaries/en";
 
 vi.mock("@/app/newsletter-actions", () => ({
   subscribeToNewsletterAction: vi.fn(),
@@ -17,7 +18,7 @@ describe("NewsletterForm", () => {
     const user = userEvent.setup();
     vi.mocked(subscribeToNewsletterAction).mockResolvedValue(undefined);
 
-    render(<NewsletterForm />);
+    render(<NewsletterForm dict={dictionary.newsletter} />);
 
     await user.type(screen.getByLabelText("Email"), "jane@example.com");
     await user.click(screen.getByRole("button", { name: "Subscribe" }));
@@ -32,7 +33,7 @@ describe("NewsletterForm", () => {
     const user = userEvent.setup();
     vi.mocked(subscribeToNewsletterAction).mockRejectedValue(new Error("email must be a valid email"));
 
-    render(<NewsletterForm />);
+    render(<NewsletterForm dict={dictionary.newsletter} />);
 
     await user.type(screen.getByLabelText("Email"), "jane@example.com");
     await user.click(screen.getByRole("button", { name: "Subscribe" }));

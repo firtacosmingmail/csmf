@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getPostById, getPostBySlug } from "@/lib/api/posts";
+import type { Locale } from "@/i18n/locales";
 import { PostForm } from "../../post-form";
 import { updatePostAction } from "../../actions";
 import { BlockEditor } from "@/components/block-editor/block-editor";
@@ -22,7 +23,7 @@ export default async function EditPostPage({
   // getPostById only returns metadata — blocks come from the slug-keyed
   // detail route instead (RLS lets an authenticated admin session read a
   // draft's blocks there too, not just published ones).
-  const postWithBlocks = await getPostBySlug(post.slug, session?.access_token);
+  const postWithBlocks = await getPostBySlug(post.slug, post.locale as Locale, session?.access_token);
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-10 px-6 py-12">

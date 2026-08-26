@@ -21,7 +21,7 @@ export type Database = {
           contact_email: string | null
           created_at: string
           headline: string | null
-          id: boolean
+          locale: string
           updated_at: string
         }
         Insert: {
@@ -30,7 +30,7 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           headline?: string | null
-          id?: boolean
+          locale: string
           updated_at?: string
         }
         Update: {
@@ -39,7 +39,7 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           headline?: string | null
-          id?: boolean
+          locale?: string
           updated_at?: string
         }
         Relationships: []
@@ -124,6 +124,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          locale: string
           pinned: boolean
           preview_image_alt: string | null
           preview_image_block_id: string | null
@@ -133,11 +134,13 @@ export type Database = {
           status: string
           subtitle: string | null
           title: string
+          translation_group_id: string
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
+          locale?: string
           pinned?: boolean
           preview_image_alt?: string | null
           preview_image_block_id?: string | null
@@ -147,11 +150,13 @@ export type Database = {
           status?: string
           subtitle?: string | null
           title: string
+          translation_group_id?: string
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
+          locale?: string
           pinned?: boolean
           preview_image_alt?: string | null
           preview_image_block_id?: string | null
@@ -161,6 +166,7 @@ export type Database = {
           status?: string
           subtitle?: string | null
           title?: string
+          translation_group_id?: string
           updated_at?: string
         }
         Relationships: [
@@ -200,6 +206,30 @@ export type Database = {
         }
         Relationships: []
       }
+      subscribers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       work_experience: {
         Row: {
           company: string
@@ -208,8 +238,10 @@ export type Database = {
           display_order: number
           end_date: string | null
           id: string
+          locale: string
           role: string
           start_date: string | null
+          translation_group_id: string
           updated_at: string
         }
         Insert: {
@@ -219,8 +251,10 @@ export type Database = {
           display_order?: number
           end_date?: string | null
           id?: string
+          locale?: string
           role: string
           start_date?: string | null
+          translation_group_id?: string
           updated_at?: string
         }
         Update: {
@@ -230,8 +264,10 @@ export type Database = {
           display_order?: number
           end_date?: string | null
           id?: string
+          locale?: string
           role?: string
           start_date?: string | null
+          translation_group_id?: string
           updated_at?: string
         }
         Relationships: []

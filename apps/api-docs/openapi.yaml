@@ -63,10 +63,11 @@ paths:
       description: >
         RLS-scoped: anonymous callers only ever see published posts,
         regardless of `?status=`; an authenticated admin session sees
-        everything, optionally filtered by `?status=`, `?pinned=`, or a
-        single `?id=`. Pass `?page=` (1-indexed; `?per_page=` defaults to
-        6) to paginate — the response then includes `total`; omit it for
-        the unpaginated admin list behavior.
+        everything, optionally filtered by `?status=`, `?pinned=`,
+        `?locale=`, `?translation_group_id=`, or a single `?id=`. Pass
+        `?page=` (1-indexed; `?per_page=` defaults to 6) to paginate — the
+        response then includes `total`; omit it for the unpaginated admin
+        list behavior.
       operationId: listPosts
       parameters:
         - name: status
@@ -83,6 +84,16 @@ paths:
           in: query
           schema:
             type: boolean
+        - name: locale
+          in: query
+          schema:
+            type: string
+            enum: [en, ro]
+        - name: translation_group_id
+          in: query
+          schema:
+            type: string
+            format: uuid
         - name: page
           in: query
           schema:
@@ -164,7 +175,9 @@ paths:
       description: >
         RLS-scoped: anonymous callers only ever get a published post (a
         draft's slug 404s for them); an authenticated admin session can
-        fetch any post regardless of status.
+        fetch any post regardless of status. Slugs are only unique per
+        locale, so `?locale=` (defaulting to "en") picks which language's
+        post to look up.
 
         Note: despite the shared `{id}` path parameter name (this and the
         PATCH/DELETE operations below all resolve to the same URL shape, so
@@ -178,6 +191,12 @@ paths:
           schema:
             type: string
           description: The post's slug.
+        - name: locale
+          in: query
+          schema:
+            type: string
+            enum: [en, ro]
+            default: en
       security:
         - apikey: []
         - apikey: []
@@ -515,9 +534,19 @@ paths:
   /about-me:
     get:
       tags: [about-me]
-      summary: Get the about_me singleton row
-      description: Public — RLS allows anon reads. `about_me` is `null` until a row exists.
+      summary: Get the about_me row for a locale
+      description: >
+        Public — RLS allows anon reads. Pass `?locale=` to get that
+        locale's row (`about_me` is `null` until one has been saved);
+        omitting it is an admin-only shape that returns every locale's row
+        as an array instead.
       operationId: getAboutMe
+      parameters:
+        - name: locale
+          in: query
+          schema:
+            type: string
+            enum: [en, ro]
       security:
         - apikey: []
       responses:
@@ -529,8 +558,21 @@ paths:
                 type: object
                 properties:
                   about_me:
-                    $ref: "#/components/schemas/AboutMe"
-                    nullable: true
+                    description: >
+                      A single (possibly null) row when `?locale=` was
+                      given, otherwise an array of every locale's row.
+                    oneOf:
+                      - $ref: "#/components/schemas/AboutMe"
+                        nullable: true
+                      - type: array
+                        items:
+                          $ref: "#/components/schemas/AboutMe"
+        "400":
+          description: Invalid locale value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Query error
           content:
@@ -539,11 +581,12 @@ paths:
                 $ref: "#/components/schemas/Error"
     put:
       tags: [about-me]
-      summary: Upsert the about_me singleton row
+      summary: Upsert a locale's about_me row
       description: >
-        Admin only. Accepts any subset of headline/bio/avatar_url/
-        contact_email; upserts the id: true row, so it works whether or
-        not one already exists. Get avatar_url from `POST /images` first.
+        Admin only. `locale` is required; the rest (headline/bio/
+        avatar_url/contact_email) is any subset. Upserts that locale's row,
+        so it works whether or not one already exists. Get avatar_url from
+        `POST /images` first.
       operationId: updateAboutMe
       security:
         - apikey: []
@@ -710,8 +753,18 @@ paths:
     get:
       tags: [work-experience]
       summary: List work experience entries
-      description: Public — RLS allows anon reads. Ordered by display_order.
+      description: >
+        Public — RLS allows anon reads. Ordered by display_order. Pass
+        `?locale=` to scope to one language's entries — omit it to get
+        every locale's entries (the admin editor groups these by
+        translation_group_id).
       operationId: listWorkExperience
+      parameters:
+        - name: locale
+          in: query
+          schema:
+            type: string
+            enum: [en, ro]
       security:
         - apikey: []
       responses:
@@ -1183,6 +1236,13 @@ components:
           type: string
           format: date-time
           nullable: true
+        locale:
+          type: string
+          enum: [en, ro]
+        translation_group_id:
+          type: string
+          format: uuid
+          description: Shared by this post and its translation(s), if any.
         created_at:
           type: string
           format: date-time
@@ -1193,7 +1253,10 @@ components:
       type: object
       description: >
         POST requires title and slug; PATCH accepts any subset of these
-        fields.
+        fields. `locale` and `translation_group_id` are create-only (POST) —
+        PATCH ignores them, since a post's translation identity doesn't
+        change after creation. `locale` defaults to "en"; pass an existing
+        post's `translation_group_id` to create this one as its translation.
       properties:
         title:
           type: string
@@ -1207,6 +1270,12 @@ components:
           enum: [draft, published]
         pinned:
           type: boolean
+        locale:
+          type: string
+          enum: [en, ro]
+        translation_group_id:
+          type: string
+          format: uuid
     PostBlock:
       type: object
       properties:
@@ -1257,12 +1326,27 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/PostBlock"
+            translations:
+              type: array
+              description: >
+                Other locales' published rows sharing this post's
+                translation_group_id, as {locale, slug} — enough to link
+                straight to the translation.
+              items:
+                type: object
+                properties:
+                  locale:
+                    type: string
+                    enum: [en, ro]
+                  slug:
+                    type: string
     AboutMe:
       type: object
       properties:
-        id:
-          type: boolean
-          description: Always `true` — singleton row.
+        locale:
+          type: string
+          enum: [en, ro]
+          description: Primary key — one row per locale.
         headline:
           type: string
           nullable: true
@@ -1283,8 +1367,14 @@ components:
           format: date-time
     AboutMeInput:
       type: object
-      description: Any subset of these fields — PUT upserts, so partial updates work.
+      description: >
+        `locale` is required (it's the row's primary key); the rest are any
+        subset — PUT upserts, so partial updates work.
+      required: [locale]
       properties:
+        locale:
+          type: string
+          enum: [en, ro]
         headline:
           type: string
         bio:
@@ -1348,6 +1438,13 @@ components:
           description: Null for an ongoing role.
         display_order:
           type: integer
+        locale:
+          type: string
+          enum: [en, ro]
+        translation_group_id:
+          type: string
+          format: uuid
+          description: Shared by this entry and its translation(s), if any.
         created_at:
           type: string
           format: date-time
@@ -1358,7 +1455,10 @@ components:
       type: object
       description: >
         POST requires company and role; PATCH accepts any subset of
-        company/role/description/start_date/end_date/display_order.
+        company/role/description/start_date/end_date/display_order/locale/
+        translation_group_id. `locale` defaults to "en"; pass an existing
+        entry's `translation_group_id` to create this one as its
+        translation.
       properties:
         company:
           type: string
@@ -1376,6 +1476,12 @@ components:
           nullable: true
         display_order:
           type: integer
+        locale:
+          type: string
+          enum: [en, ro]
+        translation_group_id:
+          type: string
+          format: uuid
     Comment:
       type: object
       properties:

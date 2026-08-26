@@ -7,15 +7,21 @@ create table posts (
   id uuid primary key default gen_random_uuid(),
   title text not null,
   subtitle text,
-  slug text not null unique,
+  slug text not null,
   status text not null default 'draft' check (status in ('draft', 'published')),
   pinned boolean not null default false,
   preview_image_url text,
   preview_image_alt text,
   preview_image_block_id uuid,
   published_at timestamptz,
+  -- locale + translation_group_id (FLE i18n): a post's translations share a
+  -- translation_group_id, one row per locale. Slugs only need to be unique
+  -- within a locale, not globally.
+  locale text not null default 'en' check (locale in ('en', 'ro')),
+  translation_group_id uuid not null default gen_random_uuid(),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (locale, slug)
 );
 
 create trigger posts_set_updated_at

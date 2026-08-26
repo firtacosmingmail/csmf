@@ -1,8 +1,9 @@
--- about_me (singleton — the boolean PK + check(id) trick caps this at one row)
+-- about_me (locale-keyed — one row per supported locale, capped by `locale`
+-- itself being the primary key + a check constraint on the allowed values)
 -- Depends on: 00_extensions_and_functions.sql
 
 create table about_me (
-  id boolean primary key default true check (id),
+  locale text primary key check (locale in ('en', 'ro')),
   headline text,
   bio text,
   avatar_url text,

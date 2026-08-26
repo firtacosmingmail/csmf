@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Newsreader, Source_Sans_3, JetBrains_Mono, Caveat } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 
 const newsreader = Newsreader({
@@ -29,10 +30,14 @@ export const metadata: Metadata = {
   description: "Personal blog",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Set by proxy.ts for locale-prefixed public routes; falls back to "en"
+  // for /admin (which isn't localized).
+  const lang = (await headers()).get("x-locale") ?? "en";
+
   return (
     <html
-      lang="en"
+      lang={lang}
       className={`${newsreader.variable} ${sourceSans.variable} ${jetbrainsMono.variable} ${caveat.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-paper text-ink">

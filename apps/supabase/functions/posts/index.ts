@@ -4,22 +4,33 @@ import { pickFields, statusForPostgresError } from "../_shared/http.ts";
 import { validateBlockContent } from "../_shared/blocks.ts";
 import { paginationRange } from "../_shared/pagination.ts";
 import { validateCommentInput } from "../_shared/comments.ts";
+import { isLocale } from "../_shared/locales.ts";
 
 const app = new Hono().basePath("/posts");
 
 const WRITABLE_FIELDS = ["title", "subtitle", "slug", "status", "pinned"] as const;
+// Only settable at creation — a post's locale/group is its translation
+// identity, not something PATCH should be able to move around.
+const CREATE_ONLY_FIELDS = ["locale", "translation_group_id"] as const;
 
 // List posts. RLS scopes this per caller: anon only ever sees published
 // posts regardless of ?status=; an authenticated admin session sees
-// everything, optionally filtered by ?status=, ?pinned=, or a single ?id=.
-// ?page= (1-indexed, with ?per_page=) paginates and adds a `total` count to
-// the response — omit it for the unpaginated admin list behavior.
+// everything, optionally filtered by ?status=, ?pinned=, ?locale=,
+// ?translation_group_id=, or a single ?id=. ?page= (1-indexed, with
+// ?per_page=) paginates and adds a `total` count to the response — omit it
+// for the unpaginated admin list behavior.
 app.get("/", async (c) => {
   const supabase = createScopedClient(c.req.header("Authorization") ?? null);
   const status = c.req.query("status");
   const id = c.req.query("id");
   const pinned = c.req.query("pinned");
+  const locale = c.req.query("locale");
+  const translationGroupId = c.req.query("translation_group_id");
   const page = c.req.query("page");
+
+  if (locale !== undefined && !isLocale(locale)) {
+    return c.json({ error: "locale must be one of: en, ro" }, 400);
+  }
 
   let query = page
     ? supabase.from("posts").select("*", { count: "exact" })
@@ -29,6 +40,8 @@ app.get("/", async (c) => {
   if (id) query = query.eq("id", id);
   if (pinned === "true") query = query.eq("pinned", true);
   if (pinned === "false") query = query.eq("pinned", false);
+  if (locale) query = query.eq("locale", locale);
+  if (translationGroupId) query = query.eq("translation_group_id", translationGroupId);
   if (page) {
     const { from, to } = paginationRange(page, c.req.query("per_page"));
     query = query.range(from, to);
@@ -42,24 +55,43 @@ app.get("/", async (c) => {
 // Public: a published post + its ordered blocks, in one call. RLS (via the
 // shared scoped client) is what actually restricts this to published posts
 // for anonymous callers — the handler doesn't need to check status itself.
+// Slugs are only unique per locale, so `?locale=` (defaulting to "en")
+// picks which language's post to look up. The response also lists
+// published sibling translations ({ locale, slug }) so the caller can
+// render a language switcher that links straight to the translated post
+// instead of falling back to that language's home page.
 app.get("/:slug", async (c) => {
   const supabase = createScopedClient(c.req.header("Authorization") ?? null);
   const slug = c.req.param("slug");
+  const locale = c.req.query("locale") ?? "en";
+  if (!isLocale(locale)) return c.json({ error: "locale must be one of: en, ro" }, 400);
 
   const { data, error } = await supabase
     .from("posts")
     .select("*, post_blocks!post_blocks_post_id_fkey(*)")
     .eq("slug", slug)
+    .eq("locale", locale)
     .order("display_order", { referencedTable: "post_blocks" })
     .maybeSingle();
 
   if (error) return c.json({ error: error.message }, 500);
   if (!data) return c.json({ error: "Not found" }, 404);
-  return c.json({ post: data });
+
+  const { data: translations, error: translationsError } = await supabase
+    .from("posts")
+    .select("locale, slug")
+    .eq("translation_group_id", data.translation_group_id)
+    .neq("id", data.id);
+  if (translationsError) return c.json({ error: translationsError.message }, 500);
+
+  return c.json({ post: data, translations: translations ?? [] });
 });
 
 // Admin only (RLS rejects anon inserts with 42501). New posts start with
 // zero blocks — the block editor (Phase 05) adds those separately.
+// `locale` defaults to "en" at the DB level; pass `translation_group_id`
+// to create this post as a translation of an existing one, otherwise it
+// starts its own group.
 app.post("/", async (c) => {
   const supabase = createScopedClient(c.req.header("Authorization") ?? null);
 
@@ -73,10 +105,13 @@ app.post("/", async (c) => {
   if (!body.title || !body.slug) {
     return c.json({ error: "title and slug are required" }, 400);
   }
+  if (body.locale !== undefined && !isLocale(body.locale)) {
+    return c.json({ error: "locale must be one of: en, ro" }, 400);
+  }
 
   const { data, error } = await supabase
     .from("posts")
-    .insert(pickFields(body, WRITABLE_FIELDS))
+    .insert({ ...pickFields(body, WRITABLE_FIELDS), ...pickFields(body, CREATE_ONLY_FIELDS) })
     .select()
     .single();
 

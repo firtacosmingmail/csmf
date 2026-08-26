@@ -1,34 +1,49 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { getAboutMe } from "@/lib/api/about-me";
 import { getWorkExperience } from "@/lib/api/work-experience";
 import { sortByStartDateDesc } from "@/lib/sort-experience";
 import { stripHtml } from "@/lib/text-content";
+import { getDictionary } from "@/i18n/dictionaries";
+import { isLocale } from "@/i18n/locales";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
-function formatDate(date: string | null): string {
+type Params = Promise<{ lang: string }>;
+
+function formatDate(date: string | null, lang: string): string {
   if (!date) return "";
-  return new Date(date).toLocaleDateString(undefined, { year: "numeric", month: "short" });
+  return new Date(date).toLocaleDateString(lang, { year: "numeric", month: "short" });
 }
 
-export async function generateMetadata(): Promise<Metadata> {
-  const aboutMe = await getAboutMe();
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
+  const { lang } = await params;
+  if (!isLocale(lang)) return {};
+  const dict = await getDictionary(lang);
+  const aboutMe = await getAboutMe(lang);
   const description = aboutMe?.bio ? stripHtml(aboutMe.bio) : undefined;
 
   return {
-    title: "About",
+    title: dict.about.title,
     description,
-    openGraph: { title: "About", description, type: "profile" },
+    openGraph: { title: dict.about.title, description, type: "profile" },
   };
 }
 
-export default async function AboutPage() {
-  const [aboutMe, workExperience] = await Promise.all([getAboutMe(), getWorkExperience()]);
+export default async function AboutPage({ params }: { params: Params }) {
+  const { lang } = await params;
+  if (!isLocale(lang)) notFound();
+
+  const [dict, aboutMe, workExperience] = await Promise.all([
+    getDictionary(lang),
+    getAboutMe(lang),
+    getWorkExperience(lang),
+  ]);
   const experience = sortByStartDateDesc(workExperience);
 
   return (
     <>
-      <SiteHeader />
+      <SiteHeader lang={lang} dict={dict} />
 
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-10 px-6 pb-16">
         <section className="flex flex-col gap-4 py-8">
@@ -52,7 +67,7 @@ export default async function AboutPage() {
 
         {experience.length > 0 && (
           <section className="flex flex-col gap-6">
-            <h2 className="font-serif text-2xl text-ink">Experience</h2>
+            <h2 className="font-serif text-2xl text-ink">{dict.about.experience}</h2>
             <ol className="flex flex-col gap-6">
               {experience.map((item) => (
                 <li key={item.id} className="flex flex-col gap-1">
@@ -61,7 +76,8 @@ export default async function AboutPage() {
                       {item.role} · {item.company}
                     </span>
                     <span className="font-sans text-sm text-ink-muted">
-                      {formatDate(item.start_date)} – {item.end_date ? formatDate(item.end_date) : "Present"}
+                      {formatDate(item.start_date, lang)} –{" "}
+                      {item.end_date ? formatDate(item.end_date, lang) : dict.about.present}
                     </span>
                   </div>
                   {item.description && <p className="font-sans text-ink-muted">{item.description}</p>}
@@ -72,7 +88,7 @@ export default async function AboutPage() {
         )}
       </main>
 
-      <SiteFooter />
+      <SiteFooter lang={lang} dict={dict} />
     </>
   );
 }

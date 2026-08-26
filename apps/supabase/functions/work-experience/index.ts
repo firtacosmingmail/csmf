@@ -2,15 +2,26 @@ import { Hono } from "hono";
 import { createScopedClient } from "../_shared/client.ts";
 import { statusForPostgresError } from "../_shared/http.ts";
 import { validateWorkExperienceInput, validateWorkExperienceUpdate } from "../_shared/work-experience.ts";
+import { isLocale } from "../_shared/locales.ts";
 
 const app = new Hono().basePath("/work-experience");
 
 // Public: ordered for display (admin arranges display_order via
 // drag-to-reorder; typically newest role first). RLS allows anon reads.
+// `?locale=` scopes to one language's entries — the public About page
+// always passes it; the admin editor omits it to manage every locale's
+// entries (grouped client-side by translation_group_id) at once.
 app.get("/", async (c) => {
   const supabase = createScopedClient(c.req.header("Authorization") ?? null);
+  const locale = c.req.query("locale");
+  if (locale !== undefined && !isLocale(locale)) {
+    return c.json({ error: "locale must be one of: en, ro" }, 400);
+  }
 
-  const { data, error } = await supabase.from("work_experience").select("*").order("display_order");
+  let query = supabase.from("work_experience").select("*").order("display_order");
+  if (locale) query = query.eq("locale", locale);
+
+  const { data, error } = await query;
   if (error) return c.json({ error: error.message }, statusForPostgresError(error.code));
   return c.json({ work_experience: data });
 });

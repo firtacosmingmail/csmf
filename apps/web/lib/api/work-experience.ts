@@ -1,5 +1,6 @@
 import { apiFetch } from "./client";
 import type { Database } from "@csmf/supabase";
+import type { Locale } from "@/i18n/locales";
 
 export type WorkExperience = Database["public"]["Tables"]["work_experience"]["Row"];
 
@@ -10,6 +11,10 @@ export type WorkExperienceInput = {
   start_date?: string | null;
   end_date?: string | null;
   display_order?: number;
+  // Create-only: locale defaults to "en"; pass translation_group_id to
+  // link this entry as the translation of an existing one.
+  locale?: Locale;
+  translation_group_id?: string;
 };
 
 async function unwrapOrThrow<T>(res: Response, key: string, verb: string): Promise<T> {
@@ -21,8 +26,10 @@ async function unwrapOrThrow<T>(res: Response, key: string, verb: string): Promi
   return body[key];
 }
 
-export async function getWorkExperience(): Promise<WorkExperience[]> {
-  const res = await apiFetch("/work-experience");
+// `locale` scopes to one language's entries (public About page); omit it
+// to fetch every locale's entries (the admin editor).
+export async function getWorkExperience(locale?: Locale): Promise<WorkExperience[]> {
+  const res = await apiFetch(`/work-experience${locale ? `?locale=${locale}` : ""}`);
   return unwrapOrThrow<WorkExperience[]>(res, "work_experience", "fetch work experience");
 }
 

@@ -49,16 +49,58 @@ describe("AboutForm", () => {
     vi.mocked(deleteSocialLinkAction).mockReset();
   });
 
-  it("saves the headline on blur", async () => {
+  it("saves the headline for the active (default English) locale on blur", async () => {
     const user = userEvent.setup();
-    render(<AboutForm initialAboutMe={null} initialSocialLinks={[]} />);
+    render(<AboutForm initialAboutMeByLocale={[]} initialSocialLinks={[]} />);
 
     const headline = screen.getByLabelText("Headline");
     await user.type(headline, "Hi there");
     await user.tab();
 
     await waitFor(() => {
-      expect(updateAboutMeAction).toHaveBeenCalledWith({ headline: "Hi there" });
+      expect(updateAboutMeAction).toHaveBeenCalledWith({ locale: "en", headline: "Hi there" });
+    });
+  });
+
+  it("switches tabs to edit the Romanian row independently", async () => {
+    const user = userEvent.setup();
+    render(
+      <AboutForm
+        initialAboutMeByLocale={[
+          {
+            locale: "en",
+            headline: "Hi",
+            bio: null,
+            avatar_url: null,
+            contact_email: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          {
+            locale: "ro",
+            headline: "Salut",
+            bio: null,
+            avatar_url: null,
+            contact_email: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+        ]}
+        initialSocialLinks={[]}
+      />,
+    );
+
+    expect(screen.getByLabelText("Headline")).toHaveValue("Hi");
+
+    await user.click(screen.getByText("Română"));
+    expect(screen.getByLabelText("Headline")).toHaveValue("Salut");
+
+    await user.clear(screen.getByLabelText("Headline"));
+    await user.type(screen.getByLabelText("Headline"), "Salut nou");
+    await user.tab();
+
+    await waitFor(() => {
+      expect(updateAboutMeAction).toHaveBeenCalledWith({ locale: "ro", headline: "Salut nou" });
     });
   });
 
@@ -66,7 +108,7 @@ describe("AboutForm", () => {
     const user = userEvent.setup();
     vi.mocked(createSocialLinkAction).mockResolvedValue(makeLink({ id: "new-link" }));
 
-    render(<AboutForm initialAboutMe={null} initialSocialLinks={[]} />);
+    render(<AboutForm initialAboutMeByLocale={[]} initialSocialLinks={[]} />);
 
     await user.click(screen.getByText("Add"));
     expect(createSocialLinkAction).not.toHaveBeenCalled();
@@ -90,7 +132,7 @@ describe("AboutForm", () => {
     const user = userEvent.setup();
     vi.mocked(deleteSocialLinkAction).mockResolvedValue(undefined);
 
-    render(<AboutForm initialAboutMe={null} initialSocialLinks={[makeLink({})]} />);
+    render(<AboutForm initialAboutMeByLocale={[]} initialSocialLinks={[makeLink({})]} />);
 
     await user.click(screen.getByText("Remove"));
 
@@ -103,7 +145,7 @@ describe("AboutForm", () => {
   it("uploads an avatar and saves the resulting url", async () => {
     vi.mocked(uploadAvatarAction).mockResolvedValue({ url: "https://example.com/avatar.png", width: 1, height: 1 });
 
-    render(<AboutForm initialAboutMe={null} initialSocialLinks={[]} />);
+    render(<AboutForm initialAboutMeByLocale={[]} initialSocialLinks={[]} />);
 
     const file = new File(["fake"], "avatar.png", { type: "image/png" });
     const user = userEvent.setup();
@@ -113,7 +155,7 @@ describe("AboutForm", () => {
       expect(uploadAvatarAction).toHaveBeenCalled();
     });
     await waitFor(() => {
-      expect(updateAboutMeAction).toHaveBeenCalledWith({ avatar_url: "https://example.com/avatar.png" });
+      expect(updateAboutMeAction).toHaveBeenCalledWith({ locale: "en", avatar_url: "https://example.com/avatar.png" });
     });
   });
 
@@ -121,7 +163,7 @@ describe("AboutForm", () => {
     const user = userEvent.setup();
     vi.mocked(updateAboutMeAction).mockRejectedValueOnce(new Error("network blip"));
 
-    render(<AboutForm initialAboutMe={null} initialSocialLinks={[]} />);
+    render(<AboutForm initialAboutMeByLocale={[]} initialSocialLinks={[]} />);
 
     await user.type(screen.getByLabelText("Headline"), "Hi");
     await user.tab();
@@ -132,7 +174,7 @@ describe("AboutForm", () => {
   });
 
   it("shows an empty state when there are no social links", () => {
-    render(<AboutForm initialAboutMe={null} initialSocialLinks={[]} />);
+    render(<AboutForm initialAboutMeByLocale={[]} initialSocialLinks={[]} />);
     expect(screen.getByText("No social links yet.")).toBeInTheDocument();
   });
 });

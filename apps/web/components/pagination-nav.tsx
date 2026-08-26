@@ -1,8 +1,20 @@
 import Link from "next/link";
+import type { Dictionary } from "@/i18n/dictionaries";
+import type { Locale } from "@/i18n/locales";
 
 // Plain <Link>-based pager (not client-side/infinite scroll) — each page
 // is its own crawlable, cacheable URL, per FLE-40.
-export function PaginationNav({ page, totalPages }: { page: number; totalPages: number }) {
+export function PaginationNav({
+  page,
+  totalPages,
+  lang,
+  dict,
+}: {
+  page: number;
+  totalPages: number;
+  lang: Locale;
+  dict: Dictionary;
+}) {
   if (totalPages <= 1) return null;
 
   return (
@@ -11,24 +23,25 @@ export function PaginationNav({ page, totalPages }: { page: number; totalPages: 
       aria-label="Pagination"
     >
       {page > 1 ? (
-        <Link href={page - 1 === 1 ? "/" : `/?page=${page - 1}`} className="hover:text-ink hover:underline">
-          ← Newer
+        <Link
+          href={page - 1 === 1 ? `/${lang}` : `/${lang}?page=${page - 1}`}
+          className="hover:text-ink hover:underline"
+        >
+          {dict.pagination.newer}
         </Link>
       ) : (
         <span aria-hidden className="opacity-40">
-          ← Newer
+          {dict.pagination.newer}
         </span>
       )}
-      <span>
-        Page {page} of {totalPages}
-      </span>
+      <span>{dict.pagination.pageOf(page, totalPages)}</span>
       {page < totalPages ? (
-        <Link href={`/?page=${page + 1}`} className="hover:text-ink hover:underline">
-          Older →
+        <Link href={`/${lang}?page=${page + 1}`} className="hover:text-ink hover:underline">
+          {dict.pagination.older}
         </Link>
       ) : (
         <span aria-hidden className="opacity-40">
-          Older →
+          {dict.pagination.older}
         </span>
       )}
     </nav>

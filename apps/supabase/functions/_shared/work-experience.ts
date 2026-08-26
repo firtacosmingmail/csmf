@@ -1,4 +1,5 @@
 import { z } from "npm:zod@3";
+import { LOCALES } from "./locales.ts";
 
 const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be an ISO date (YYYY-MM-DD)");
 
@@ -10,6 +11,11 @@ const workExperienceInputSchema = z
     start_date: dateString.nullable().optional(),
     end_date: dateString.nullable().optional(),
     display_order: z.number().int().optional(),
+    // Both optional: locale defaults to 'en' at the DB level for a
+    // standalone entry; translation_group_id links a new entry to an
+    // existing one as its translation (omit it to start a new group).
+    locale: z.enum(LOCALES).optional(),
+    translation_group_id: z.string().uuid().optional(),
   })
   .strict();
 
