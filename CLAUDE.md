@@ -46,6 +46,11 @@ apps/
       storage/              Same convention, for Supabase Storage buckets.
 
   api-docs/               Swagger UI + the OpenAPI spec for the Edge Functions API — see Conventions.
+
+  mcp-server/             MCP (stdio) server exposing tools to create/edit/publish posts without opening
+                          /admin. Not a new backend — a Node client of the same Edge Functions API above,
+                          authenticating as the admin account the same way apps/web does. See its own
+                          README.md for setup and the tool list.
 ```
 
 ## Conventions

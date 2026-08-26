@@ -27,3 +27,6 @@ apps/supabase/.temp/
 apps/supabase/.branches/
 # CLI caches this relative to invocation cwd, not just the linked project dir.
 /supabase/.temp/
+
+# mcp-server build output
+apps/mcp-server/dist/
