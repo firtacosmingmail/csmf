@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Newsreader, Source_Sans_3, JetBrains_Mono, Caveat } from "next/font/google";
 import { headers } from "next/headers";
+import { siteUrl, siteName } from "@/lib/site";
 import "./globals.css";
 
 const newsreader = Newsreader({
@@ -26,7 +27,11 @@ const caveat = Caveat({
 });
 
 export const metadata: Metadata = {
-  title: "csmf",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: siteName,
+    template: `%s | ${siteName}`,
+  },
   description: "Personal blog",
 };
 

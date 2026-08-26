@@ -4,7 +4,7 @@ import { getAboutMe } from "@/lib/api/about-me";
 import { totalPages } from "@/lib/pagination";
 import { stripHtml } from "@/lib/text-content";
 import { getDictionary } from "@/i18n/dictionaries";
-import { isLocale } from "@/i18n/locales";
+import { isLocale, locales } from "@/i18n/locales";
 import { notFound } from "next/navigation";
 import { PostCard } from "@/components/post-card";
 import { PostListItem } from "@/components/post-list-item";
@@ -25,7 +25,17 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return {
     title: aboutMe?.headline ?? undefined,
     description,
-    openGraph: { title: aboutMe?.headline ?? undefined, description, type: "website" },
+    alternates: {
+      canonical: `/${lang}`,
+      languages: Object.fromEntries(locales.map((l) => [l, `/${l}`])),
+      types: { "application/rss+xml": `/${lang}/feed.xml` },
+    },
+    openGraph: {
+      title: aboutMe?.headline ?? undefined,
+      description,
+      type: "website",
+      images: ["/opengraph-image"],
+    },
   };
 }
 

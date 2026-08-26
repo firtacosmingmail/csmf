@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAboutMe } from "@/lib/api/about-me";
 import { getDictionary } from "@/i18n/dictionaries";
-import { isLocale, type Locale } from "@/i18n/locales";
+import { isLocale, locales, type Locale } from "@/i18n/locales";
 import { LegalPage } from "@/components/legal-page";
 
 const LAST_UPDATED: Record<Locale, string> = {
@@ -20,7 +20,14 @@ type Params = Promise<{ lang: string }>;
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { lang } = await params;
   if (!isLocale(lang)) return {};
-  return { title: METADATA[lang].title, description: METADATA[lang].description };
+  return {
+    title: METADATA[lang].title,
+    description: METADATA[lang].description,
+    alternates: {
+      canonical: `/${lang}/privacy`,
+      languages: Object.fromEntries(locales.map((l) => [l, `/${l}/privacy`])),
+    },
+  };
 }
 
 function EnglishContent({ contactEmail }: { contactEmail: string | null | undefined }) {

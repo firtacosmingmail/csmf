@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAboutMe } from "@/lib/api/about-me";
 import { getWorkExperience } from "@/lib/api/work-experience";
+import { getSocialLinks } from "@/lib/api/social-links";
 import { sortByStartDateDesc } from "@/lib/sort-experience";
 import { stripHtml } from "@/lib/text-content";
 import { getDictionary } from "@/i18n/dictionaries";
-import { isLocale } from "@/i18n/locales";
+import { isLocale, locales } from "@/i18n/locales";
+import { siteUrl, authorName } from "@/lib/site";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { JsonLd } from "@/components/json-ld";
 
 type Params = Promise<{ lang: string }>;
 
@@ -26,7 +29,16 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return {
     title: dict.about.title,
     description,
-    openGraph: { title: dict.about.title, description, type: "profile" },
+    alternates: {
+      canonical: `/${lang}/about`,
+      languages: Object.fromEntries(locales.map((l) => [l, `/${l}/about`])),
+    },
+    openGraph: {
+      title: dict.about.title,
+      description,
+      type: "profile",
+      images: [aboutMe?.avatar_url ?? "/opengraph-image"],
+    },
   };
 }
 
@@ -34,15 +46,35 @@ export default async function AboutPage({ params }: { params: Params }) {
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
 
-  const [dict, aboutMe, workExperience] = await Promise.all([
+  const [dict, aboutMe, workExperience, socialLinks] = await Promise.all([
     getDictionary(lang),
     getAboutMe(lang),
     getWorkExperience(lang),
+    getSocialLinks(),
   ]);
   const experience = sortByStartDateDesc(workExperience);
 
+  // FLE-54: Person JSON-LD — the About page has the richest identity data
+  // (bio, avatar, work history, social profiles), so it's the natural home
+  // for this rather than duplicating a thinner version on the home page.
+  const latestRole = experience[0];
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: authorName,
+    url: `${siteUrl}/${lang}/about`,
+    ...(aboutMe?.avatar_url ? { image: aboutMe.avatar_url } : {}),
+    ...(aboutMe?.bio ? { description: stripHtml(aboutMe.bio) } : {}),
+    ...(aboutMe?.contact_email ? { email: aboutMe.contact_email } : {}),
+    ...(socialLinks.length > 0 ? { sameAs: socialLinks.map((link) => link.url) } : {}),
+    ...(latestRole
+      ? { jobTitle: latestRole.role, worksFor: { "@type": "Organization", name: latestRole.company } }
+      : {}),
+  };
+
   return (
     <>
+      <JsonLd data={jsonLd} />
       <SiteHeader lang={lang} dict={dict} />
 
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-10 px-6 pb-16">
