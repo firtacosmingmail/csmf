@@ -9,7 +9,7 @@ export async function SiteFooter() {
   return (
     <footer className="relative mt-24 bg-paper-raised">
       <WaveFooterBackground />
-      <div className="relative mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-12 font-sans text-sm text-ink-muted">
+      <div className="relative mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 pt-24 pb-12 font-sans text-sm text-ink-muted sm:pt-32">
         <nav className="flex flex-wrap gap-4">
           <Link href="/about" className="hover:text-ink hover:underline">
             About

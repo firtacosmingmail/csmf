@@ -1,7 +1,8 @@
-// Decorative wave transition at the top of the footer (FLE-46) — painted
-// in the page background color so it reads as the page "dipping into" the
-// footer's slightly-raised surface below. Path data adapted from
-// joshwcomeau.com's own footer, recolored to our own token.
+// Decorative wave transition at the top of the footer (FLE-46) — sits
+// inside the footer's own (paper-raised) top edge, painted in the main
+// page's background color, so it reads as the page dipping into the
+// footer's surface in a wave pattern rather than a hard line. Path data
+// adapted from joshwcomeau.com's own footer, recolored to our own token.
 export function WaveFooterBackground() {
   return (
     <svg
@@ -12,7 +13,7 @@ export function WaveFooterBackground() {
       fill="none"
       preserveAspectRatio="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="pointer-events-none absolute inset-x-0 top-0 h-full w-full -translate-y-full"
+      className="pointer-events-none absolute inset-x-0 top-0 h-16 w-full sm:h-24"
     >
       <path
         fill="var(--color-paper)"
