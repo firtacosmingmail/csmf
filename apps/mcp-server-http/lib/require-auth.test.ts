@@ -26,6 +26,16 @@ describe("isAuthorized", () => {
   it("accepts a matching token", () => {
     expect(isAuthorized("Bearer secret", "secret")).toBe(true);
   });
+
+  it("accepts a case-insensitive scheme", () => {
+    expect(isAuthorized("bearer secret", "secret")).toBe(true);
+    expect(isAuthorized("BEARER secret", "secret")).toBe(true);
+  });
+
+  it("accepts extra whitespace around the scheme and token", () => {
+    expect(isAuthorized("Bearer  secret", "secret")).toBe(true);
+    expect(isAuthorized(" Bearer secret ", "secret")).toBe(true);
+  });
 });
 
 describe("requireAuth", () => {

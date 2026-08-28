@@ -6,8 +6,9 @@ import { timingSafeEqual } from "node:crypto";
 // credentials — see FLE-67.
 export function isAuthorized(header: string | null, expected: string | undefined): boolean {
   if (!expected) return false;
-  const [scheme, token] = (header ?? "").split(" ");
-  if (scheme !== "Bearer" || !token) return false;
+  const match = /^\s*Bearer\s+(\S+)\s*$/i.exec(header ?? "");
+  if (!match) return false;
+  const token = match[1];
 
   const bufA = Buffer.from(token);
   const bufB = Buffer.from(expected);

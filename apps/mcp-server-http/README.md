@@ -8,9 +8,9 @@ Vercel) and used from a machine other than the one the code is checked out
 on.
 
 It's a thin Next.js wrapper: `app/api/mcp/route.ts` is the only real logic
-here. It imports `createApiClient`/`createServer` straight from
-`@csmf/mcp-server`'s TypeScript source (via that package's `"exports"`
-field and this app's `transpilePackages`) and wires them up with the
+here. It imports `createApiClient`/`createServer` from `@csmf/mcp-server`'s
+*compiled* `dist/` output (via that package's `"exports"` field —
+`transpilePackages` isn't needed, see `next.config.ts`) and wires them up with the
 `@modelcontextprotocol/sdk`'s own `WebStandardStreamableHTTPServerTransport`
 — no separate MCP implementation, no duplicated tool code. Everything in
 `@csmf/mcp-server`'s README (what the tools do, the Edge Functions/RLS
