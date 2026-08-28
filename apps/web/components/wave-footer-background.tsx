@@ -1,8 +1,16 @@
 // Decorative wave transition at the top of the footer (FLE-46) — sits
-// inside the footer's own (paper-raised) top edge, painted in the main
-// page's background color, so it reads as the page dipping into the
-// footer's surface in a wave pattern rather than a hard line. Path data
-// adapted from joshwcomeau.com's own footer, recolored to our own token.
+// inside the footer's own (sky-from → sky-to gradient) top edge, painted
+// in the main page's background color, so it reads as the page dipping
+// into the footer's surface in a wave pattern rather than a hard line.
+// Path data adapted from joshwcomeau.com's own footer. Height scales with
+// viewport width (clamp, tied to vw) rather than a fixed h-16/h-24, so the
+// wave reads at closer to its natural proportions instead of looking
+// squashed flat — same "zoom" fix applied to WaveBanner above. Also
+// carries his min-width: 5120px (min-w-[320rem]) + centering so it's
+// never squashed narrower than its own art, and a -translate-y-px nudge
+// (his own trick, same value) so there's zero subpixel gap between this
+// cut and the page content sitting right above it — SiteFooter clips the
+// horizontal overflow.
 export function WaveFooterBackground() {
   return (
     <svg
@@ -13,7 +21,7 @@ export function WaveFooterBackground() {
       fill="none"
       preserveAspectRatio="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="pointer-events-none absolute inset-x-0 top-0 h-16 w-full sm:h-24"
+      className="pointer-events-none absolute left-1/2 top-0 h-[clamp(4rem,16vw,8rem)] w-full min-w-[320rem] -translate-x-1/2 -translate-y-px"
     >
       <path
         fill="var(--color-paper)"

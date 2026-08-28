@@ -1,7 +1,22 @@
 // Decorative wave background behind the site header (FLE-46) — full-bleed,
 // non-interactive layered "cloud" shapes. Path data adapted from
 // joshwcomeau.com's own banner (a personal-blog design pattern, not brand
-// assets), recolored to our own dark-theme tokens instead of his.
+// assets). Three hill layers, back to front: cloud-500 (his homepage-hero
+// path), cloud-300 (his homepage-hero path), then a frontmost hill (his
+// per-article-page banner path, rescaled to this viewBox's height) painted
+// in our own --color-paper so the banner's bottom edge dissolves into the
+// page instead of ending in a hard line — the same trick his own
+// per-article banners use, just with his --color-background swapped for
+// ours since our page background isn't his blue-tinted near-black. The
+// container this renders into (see SiteHeader) sizes itself with a
+// viewport-width clamp() rather than fixed breakpoint heights, matching
+// how his banner scales/"zooms" with the viewport instead of being
+// stretched flat. min-w-[320rem] (his own min-width: 5120px) keeps this
+// SVG at its natural 5120px width no matter how narrow the viewport is —
+// without it, width:100% on a normal-width page would squash the art
+// horizontally; centered with left-1/2 -translate-x-1/2 since the
+// artwork has no single focal point (his has the character) that would
+// need off-center compensation. SiteHeader's wrapper clips the overflow.
 export function WaveBanner() {
   return (
     <svg
@@ -12,7 +27,7 @@ export function WaveBanner() {
       fill="none"
       preserveAspectRatio="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="pointer-events-none absolute inset-0 h-full w-full"
+      className="pointer-events-none absolute left-1/2 top-0 h-full w-full min-w-[320rem] -translate-x-1/2"
     >
       <path
         fill="var(--color-cloud-500)"
@@ -22,6 +37,17 @@ export function WaveBanner() {
         fill="var(--color-cloud-300)"
         d="M2617 234C2496.99 229.765 2429.72 276.108 2400.53 303.732C2388.43 315.177 2372.83 323.5 2356.18 323.5H2135.62C2111.05 323.5 2089.95 305.704 2082.79 282.198C2061.56 212.504 2001.53 78.3592 1852.75 71.0003C1691 63 1645 185 1622 186.5C1599 188 1587 88.5 1368.5 88.5C1211 88.5 1180 157.5 1158.4 161.5C1136.8 165.501 1074.33 111 931 129.5C787.671 148 789.676 214.5 770 214C750.324 213.5 736.5 129.5 535.029 142.5C416.863 150.125 382.163 211.07 373.669 260.166C368.141 292.123 343.421 323.5 310.99 323.5H280.024C249.079 323.5 225.052 295.503 224.331 264.567C222.732 195.98 200.305 92 79 92C17.4738 92 3.47982 128.37 0.653094 139.38C0.122368 141.447 0 143.571 0 145.705V398C0 412.36 11.6404 424 25.9998 424H5100C5127.61 424 5150 401.615 5150 374V365V181.851C5150 149.381 5119.54 125.514 5087.89 132.773C5054.67 140.392 5019.02 148.008 5011.31 147.5C4996.11 146.501 4966.41 99.9071 4859.43 95.5003C4731 90.2096 4684 213.5 4663 213.5H4531.84C4513.48 213.5 4496.63 203.435 4485.66 188.715C4451.8 143.286 4365.08 52.9127 4220.67 71.0003C4061 91.0002 4023.5 150.5 4006.5 150.5C3989.5 150.5 3925.6 96.5092 3797.5 100.5C3637 105.5 3599 235.5 3589 231.5C3563.12 221.148 3430.32 192.596 3405.38 180.145C3382.96 168.954 3354.61 161.5 3318.87 161.5C3175.43 161.5 3129.73 224 3116.87 224C3104 224 3073.62 179.5 2953.5 179.5C2782 179.5 2771.92 286 2756 284.5C2740.08 283 2721.1 237.674 2617 234Z"
       />
+      <path
+        fill="var(--color-paper)"
+        transform="scale(1, 1.27731)"
+        d="M2741.5 299.5c10-1.428 20.5-71 203.5-91.5s216 49 226.5 49 56.5-74 240-49 189 86 199 84.5 49-63.5 226-71 207 63 216 63 71.5-55 243-27.5 181.5 74 195.5 73.5-8.5-102 199-139 247.5 30.5 262 30 85.5-103.5 245-58.5 0 194 0 194H-92s-72-149.5 0-177.5S1 208 12 208s42.5-98.5 250.5-100.5S511 206.5 518 208s97-68 269-34.5 194 134 203 138 88.5-24 256.5-12 186 47.5 192.5 47.5 50.5-66 204.5-65.5 193 51 202 52 68.5-27.5 248-22 215 35.5 226.5 35.5c11.5.001 38-67.142 204-79 166-11.857 207.5 32.929 217.5 31.5z"
+      />
+      {/* The path above doesn't touch y=456 at every x (it has a couple of
+          shallow valleys), which let the sky gradient peek through in a
+          thin sliver right at the banner's bottom edge. This rect is a
+          flat safety net below all three layers' texture, guaranteeing
+          the bottom is solid --color-paper with zero gap. */}
+      <rect x="-40" y="350" width="5320" height="150" fill="var(--color-paper)" />
     </svg>
   );
 }

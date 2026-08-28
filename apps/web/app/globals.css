@@ -5,8 +5,21 @@
    names (bg-paper, text-ink, border-border, text-terracotta, …) rather
    than raw Tailwind colors, so redefining the values here re-skins the
    whole site — public pages and /admin alike — without touching
-   component files. --color-cloud-500/300 are new: subtle layered-depth
-   tones for the wavy SVG banner/footer accents, not used anywhere else. */
+   component files.
+
+   --color-sky-from/--color-sky-to and --color-cloud-100/300/400/500
+   (design pass modeled on joshwcomeau.com's banner/footer treatment):
+   these are his actual dark-theme values, used as-is rather than
+   recolored. sky-from/to are a vertical gradient used behind the header
+   wave art. The banner draws three hill layers on top of it, back to
+   front: cloud-500 (lightest, farthest), cloud-300 (darker, middle),
+   then a frontmost layer painted in our own --color-paper (not a
+   cloud-10x token — his site's --color-background is close to his
+   cloud-100, but ours needs to match *our* actual page background to
+   really fade out) so the banner's bottom edge dissolves into the page
+   instead of ending in a hard line. cloud-400 is kept for reference
+   (matches his token scale) but isn't used in this composition.
+   Not used anywhere else. */
 @theme {
   --color-paper: #0a0a0a;
   --color-paper-raised: #161514;
@@ -15,8 +28,12 @@
   --color-border: #2a2826;
   --color-terracotta: #e0916b;
   --color-terracotta-hover: #ec9f7a;
-  --color-cloud-500: #1c1a18;
-  --color-cloud-300: #232120;
+  --color-sky-from: hsl(214deg 40% 11%);
+  --color-sky-to: hsl(200deg 50% 30%);
+  --color-cloud-100: hsl(210deg 15% 6%);
+  --color-cloud-300: hsl(212deg 40% 9%);
+  --color-cloud-400: hsl(213deg 40% 10%);
+  --color-cloud-500: hsl(213deg 40% 12%);
 }
 
 @theme inline {

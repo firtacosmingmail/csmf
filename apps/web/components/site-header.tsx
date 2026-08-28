@@ -6,7 +6,13 @@ import type { Locale } from "@/i18n/locales";
 
 export function SiteHeader({ lang, dict }: { lang: Locale; dict: Dictionary }) {
   return (
-    <div className="relative h-44 overflow-hidden bg-paper sm:h-56">
+    <div
+      // Height scales with viewport width (like joshwcomeau.com's banner) instead of
+      // being pinned to fixed breakpoint heights — on a wide viewport the wave art
+      // reads at closer to its natural proportions ("zoomed in") rather than being
+      // squashed flat; clamp() keeps it sane on very small/very large screens.
+      className="relative h-[clamp(13rem,30vw,22rem)] overflow-hidden bg-[linear-gradient(to_bottom,var(--color-sky-from),var(--color-sky-to))]"
+    >
       <WaveBanner />
       <header className="relative mx-auto flex h-full w-full max-w-4xl items-center justify-between px-6">
         <Link href={`/${lang}`} className="font-hand text-4xl text-ink">

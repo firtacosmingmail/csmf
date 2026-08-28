@@ -9,7 +9,7 @@ export async function SiteFooter({ lang, dict }: { lang: Locale; dict: Dictionar
   const socialLinks = await getSocialLinks();
 
   return (
-    <footer className="relative mt-24 bg-paper-raised">
+    <footer className="relative mt-24 overflow-hidden bg-[linear-gradient(to_bottom,var(--color-sky-from),var(--color-sky-to))]">
       <WaveFooterBackground />
       <div className="relative mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 pt-24 pb-12 font-sans text-sm text-ink-muted sm:pt-32">
         <nav className="flex flex-wrap gap-4">
