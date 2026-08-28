@@ -93,6 +93,15 @@ no dedicated "create a translation of this post" tool yet). All of that
 already has its own Edge Function and could get MCP tools the same way
 this package's `src/tools/*.ts` do, if it turns out to be useful.
 
+## Deploying it remotely (Vercel)
+
+This package is the local stdio version — a client that only makes sense
+running as a subprocess of an MCP client on the same machine. For a hosted
+version reachable over HTTP (deployable to Vercel, usable from any
+machine), see [`apps/mcp-server-http`](../mcp-server-http/README.md). It
+reuses this package's tools and API client unchanged — only the transport
+and auth differ.
+
 ## Notes for future changes
 
 - If a post/block/image Edge Function route changes shape, update the

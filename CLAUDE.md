@@ -51,6 +51,12 @@ apps/
                           /admin. Not a new backend — a Node client of the same Edge Functions API above,
                           authenticating as the admin account the same way apps/web does. See its own
                           README.md for setup and the tool list.
+
+  mcp-server-http/        Same tools as mcp-server, over Streamable HTTP instead of stdio, so it can be
+                          deployed to Vercel and reached remotely (bearer-token auth). Consumes
+                          @csmf/mcp-server's createApiClient/createServer factories (src/create-server.ts)
+                          via its package.json "exports" — no duplicated tool/API-client code. See its
+                          own README.md for deployment.
 ```
 
 ## Conventions

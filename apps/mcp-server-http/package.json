@@ -1,0 +1,31 @@
+{
+  "name": "@csmf/mcp-server-http",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hosted (Streamable HTTP) transport for @csmf/mcp-server, deployable to Vercel — same tools, same Edge Functions REST API client, reachable over the network with a bearer token instead of run as a local stdio subprocess.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@csmf/mcp-server": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "next": "16.3.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

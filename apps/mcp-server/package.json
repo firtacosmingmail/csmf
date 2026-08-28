@@ -7,6 +7,12 @@
   "bin": {
     "csmf-mcp-server": "./dist/index.js"
   },
+  "exports": {
+    ".": {
+      "types": "./dist/create-server.d.ts",
+      "default": "./dist/create-server.js"
+    }
+  },
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsc -p tsconfig.json",
