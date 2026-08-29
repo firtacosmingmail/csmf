@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { BlockItem } from "./block-item";
@@ -42,12 +42,21 @@ export function BlockEditor({
   title,
   subtitle,
   initialPreviewImageBlockId,
+  metadataPanel,
 }: {
   postId: string;
   initialBlocks: PostBlock[];
   title: string;
   subtitle: string | null;
   initialPreviewImageBlockId: string | null;
+  // The post-metadata form (title/slug/status/…) — a sibling concern the
+  // page owns, but it needs to sit in the same sidebar column as the
+  // preview-image picker below, which does live here. Taking it as a slot
+  // keeps both cards true DOM siblings under one <aside>, so they stack
+  // with plain flexbox instead of needing a row-spanning grid item (which
+  // otherwise inflates row tracks to match this component's often much
+  // taller content column).
+  metadataPanel?: ReactNode;
 }) {
   const [blocks, setBlocks] = useState<PostBlock[]>(initialBlocks);
   const [previewMode, setPreviewMode] = useState(false);
@@ -167,41 +176,39 @@ export function BlockEditor({
     });
   }
 
+  const imageBlocks = blocks.filter((b) => b.type === "image");
+  const showPreviewImagePicker = !previewMode && imageBlocks.length > 0;
+
   return (
-    <div className="flex flex-col gap-2">
-      {error && (
-        <div className="flex items-center justify-between gap-3 rounded border border-terracotta bg-terracotta/10 px-3 py-2 text-sm text-terracotta">
-          <span>{error}</span>
-          <button type="button" onClick={() => setError(null)} aria-label="Dismiss error" className="shrink-0">
-            ×
-          </button>
-        </div>
-      )}
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+      <div className="flex flex-col gap-2">
+        {error && (
+          <div className="flex items-center justify-between gap-3 rounded border border-terracotta bg-terracotta/10 px-3 py-2 text-sm text-terracotta">
+            <span>{error}</span>
+            <button type="button" onClick={() => setError(null)} aria-label="Dismiss error" className="shrink-0">
+              ×
+            </button>
+          </div>
+        )}
 
-      <button
-        type="button"
-        onClick={handleTogglePreview}
-        disabled={preparingPreview}
-        className="self-start rounded border border-border px-3 py-1 text-sm text-ink-muted hover:bg-paper-raised hover:text-ink disabled:opacity-50"
-      >
-        {previewMode ? "Back to editing" : preparingPreview ? "Preparing preview…" : "Preview"}
-      </button>
+        <button
+          type="button"
+          onClick={handleTogglePreview}
+          disabled={preparingPreview}
+          className="self-start rounded border border-border px-3 py-1 text-sm text-ink-muted hover:bg-paper-raised hover:text-ink disabled:opacity-50"
+        >
+          {previewMode ? "Back to editing" : preparingPreview ? "Preparing preview…" : "Preview"}
+        </button>
 
-      {previewMode ? (
-        <div className="flex flex-col gap-6 py-4">
-          <header className="flex flex-col gap-2">
-            <h1 className="font-serif text-4xl text-ink">{title}</h1>
-            {subtitle && <p className="font-sans text-lg text-ink-muted">{subtitle}</p>}
-          </header>
-          <PostBlocksRenderer blocks={previewBlocks} />
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          <PreviewImagePicker
-            imageBlocks={blocks.filter((b) => b.type === "image")}
-            selectedBlockId={previewImageBlockId}
-            onSelect={handleSelectPreviewImage}
-          />
+        {previewMode ? (
+          <div className="flex flex-col gap-6 py-4">
+            <header className="flex flex-col gap-2">
+              <h1 className="font-serif text-4xl text-ink">{title}</h1>
+              {subtitle && <p className="font-sans text-lg text-ink-muted">{subtitle}</p>}
+            </header>
+            <PostBlocksRenderer blocks={previewBlocks} />
+          </div>
+        ) : (
           <div className="flex flex-col gap-1">
             <InsertMenu
               onInsert={(type) => handleInsert(type, -1)}
@@ -226,7 +233,22 @@ export function BlockEditor({
               </SortableContext>
             </DndContext>
           </div>
-        </div>
+        )}
+      </div>
+
+      {(metadataPanel || showPreviewImagePicker) && (
+        <aside className="flex flex-col gap-6">
+          {metadataPanel && <div className="rounded border border-border bg-paper-raised p-4">{metadataPanel}</div>}
+          {showPreviewImagePicker && (
+            <div className="flex flex-col gap-3 rounded border border-border bg-paper-raised p-4">
+              <PreviewImagePicker
+                imageBlocks={imageBlocks}
+                selectedBlockId={previewImageBlockId}
+                onSelect={handleSelectPreviewImage}
+              />
+            </div>
+          )}
+        </aside>
       )}
     </div>
   );

@@ -25,21 +25,16 @@ export default async function EditPostPage({
   const postWithBlocks = await getPostBySlug(post.slug, post.locale as Locale, session?.access_token);
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-10 px-6 py-12">
-      <div className="flex w-full max-w-xl flex-col gap-6">
-        <h1 className="font-serif text-3xl text-ink">Edit post</h1>
-        <PostForm action={updatePostAction.bind(null, post.id)} defaultValues={post} submitLabel="Save" />
-      </div>
-      <div className="flex flex-col gap-4">
-        <h2 className="font-serif text-xl text-ink">Content</h2>
-        <BlockEditor
-          postId={post.id}
-          initialBlocks={postWithBlocks?.post_blocks ?? []}
-          title={post.title}
-          subtitle={post.subtitle}
-          initialPreviewImageBlockId={post.preview_image_block_id}
-        />
-      </div>
+    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-12">
+      <h1 className="font-serif text-3xl text-ink">Edit post</h1>
+      <BlockEditor
+        postId={post.id}
+        initialBlocks={postWithBlocks?.post_blocks ?? []}
+        title={post.title}
+        subtitle={post.subtitle}
+        initialPreviewImageBlockId={post.preview_image_block_id}
+        metadataPanel={<PostForm action={updatePostAction.bind(null, post.id)} defaultValues={post} submitLabel="Save" />}
+      />
     </main>
   );
 }
