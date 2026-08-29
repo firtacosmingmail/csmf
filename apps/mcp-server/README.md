@@ -77,6 +77,9 @@ server's `env` block.)
   every block, optionally publishing) in one call. The fastest path for
   "write me a post about X" — prefer it over `create_post` +
   repeated `add_block` unless you need to build the post up incrementally.
+- **Work experience**: `list_work_experience`, `create_work_experience`,
+  `update_work_experience`, `delete_work_experience`,
+  `reorder_work_experience`.
 
 Every tool's `description` documents its own input shape in detail
 (including the per-block-type `content` shape, which mirrors
@@ -85,13 +88,13 @@ connect time, so they aren't repeated here.
 
 ## What this intentionally doesn't do
 
-Scoped to posts, matching what was asked for. Not covered: comment
-moderation, `about_me`/`social_links`/`work_experience`, newsletter
-subscribers, or translations (posts support `en`/`ro` via
-`translation_group_id`, and every post tool accepts `locale`, but there's
-no dedicated "create a translation of this post" tool yet). All of that
-already has its own Edge Function and could get MCP tools the same way
-this package's `src/tools/*.ts` do, if it turns out to be useful.
+Scoped to posts and work experience, matching what was asked for. Not
+covered: comment moderation, `about_me`/`social_links`, newsletter
+subscribers, or translations (posts and work experience both support
+`en`/`ro` via `translation_group_id`, and their tools accept `locale`, but
+there's no dedicated "create a translation of this X" tool yet). All of
+that already has its own Edge Function and could get MCP tools the same
+way this package's `src/tools/*.ts` do, if it turns out to be useful.
 
 ## Deploying it remotely (Vercel)
 
@@ -104,9 +107,10 @@ and auth differ.
 
 ## Notes for future changes
 
-- If a post/block/image Edge Function route changes shape, update the
-  matching method in `src/api-client.ts` (and the tool description in
-  `src/tools/`, if the change affects what a caller needs to pass).
+- If a post/block/image/work-experience Edge Function route changes shape,
+  update the matching method in `src/api-client.ts` (and the tool
+  description in `src/tools/`, if the change affects what a caller needs
+  to pass).
 - `src/slugify.ts` is a hand-kept copy of `apps/web/lib/slugify.ts` — there's
   no shared package between them, so a change to one should be mirrored in
   the other.

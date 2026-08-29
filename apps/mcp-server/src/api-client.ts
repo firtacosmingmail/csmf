@@ -39,6 +39,20 @@ export type PostBlock = {
 
 export type UploadedImage = { url: string; width: number; height: number };
 
+export type WorkExperience = {
+  id: string;
+  company: string;
+  role: string;
+  description: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  display_order: number;
+  locale: "en" | "ro";
+  translation_group_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -176,6 +190,61 @@ export class ApiClient {
     if (!res.ok && res.status !== 204) {
       const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       throw new ApiError(typeof body.error === "string" ? body.error : `Failed to delete block: ${res.status}`, res.status);
+    }
+  }
+
+  // ---- work experience ----
+
+  listWorkExperience(locale?: string): Promise<WorkExperience[]> {
+    const qs = locale ? `?locale=${encodeURIComponent(locale)}` : "";
+    return this.json<WorkExperience[]>(`/work-experience${qs}`, {}, "work_experience");
+  }
+
+  createWorkExperience(data: {
+    company: string;
+    role: string;
+    description?: string;
+    start_date?: string | null;
+    end_date?: string | null;
+    display_order?: number;
+    locale?: string;
+    translation_group_id?: string;
+  }): Promise<WorkExperience> {
+    return this.json<WorkExperience>(
+      "/work-experience",
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) },
+      "work_experience",
+    );
+  }
+
+  updateWorkExperience(
+    id: string,
+    data: Partial<{
+      company: string;
+      role: string;
+      description: string;
+      start_date: string | null;
+      end_date: string | null;
+      display_order: number;
+      locale: string;
+      translation_group_id: string;
+    }>,
+  ): Promise<WorkExperience> {
+    return this.json<WorkExperience>(
+      `/work-experience/${encodeURIComponent(id)}`,
+      { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) },
+      "work_experience",
+    );
+  }
+
+  async deleteWorkExperience(id: string): Promise<void> {
+    const res = await this.request(`/work-experience/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!res.ok && res.status !== 204) {
+      const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      throw new ApiError(
+        typeof body.error === "string" ? body.error : `Failed to delete work experience: ${res.status}`,
+        res.status,
+      );
     }
   }
 
