@@ -82,13 +82,17 @@ export function PostForm({
 
       <label className="flex flex-col gap-1 text-sm text-ink-muted">
         Title
-        <input
+        <textarea
           name="title"
           required
+          rows={2}
           value={title}
           onChange={(e) => {
             setTitle(e.target.value);
             if (!slugTouched) setSlug(slugify(e.target.value));
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.preventDefault();
           }}
           className="rounded border border-border bg-paper px-3 py-2 text-ink"
         />
@@ -96,9 +100,13 @@ export function PostForm({
 
       <label className="flex flex-col gap-1 text-sm text-ink-muted">
         Subtitle
-        <input
+        <textarea
           name="subtitle"
+          rows={2}
           defaultValue={defaultValues?.subtitle ?? ""}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.preventDefault();
+          }}
           className="rounded border border-border bg-paper px-3 py-2 text-ink"
         />
       </label>

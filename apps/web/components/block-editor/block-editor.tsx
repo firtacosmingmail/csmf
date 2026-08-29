@@ -237,7 +237,7 @@ export function BlockEditor({
       </div>
 
       {(metadataPanel || showPreviewImagePicker) && (
-        <aside className="flex flex-col gap-6">
+        <aside className="flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start">
           {metadataPanel && <div className="rounded border border-border bg-paper-raised p-4">{metadataPanel}</div>}
           {showPreviewImagePicker && (
             <div className="flex flex-col gap-3 rounded border border-border bg-paper-raised p-4">
