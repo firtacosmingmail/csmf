@@ -8,6 +8,7 @@ import { ExperienceRow } from "./experience-row";
 import { createExperienceAction, updateExperienceAction, deleteExperienceAction } from "./actions";
 import type { WorkExperience } from "@/lib/api/work-experience";
 import { locales, type Locale } from "@/i18n/locales";
+import { Spinner } from "@/components/spinner";
 
 const LOCALE_LABEL: Record<Locale, string> = { en: "English", ro: "Română" };
 const OTHER_LOCALE: Record<Locale, Locale> = { en: "ro", ro: "en" };
@@ -35,6 +36,19 @@ export function ExperienceEditor({ initialExperience }: { initialExperience: Wor
   const [newCompany, setNewCompany] = useState("");
   const [newRole, setNewRole] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [addingItem, setAddingItem] = useState(false);
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [translatingIds, setTranslatingIds] = useState<Set<string>>(new Set());
+
+  function withPending(id: string, setIds: (fn: (prev: Set<string>) => Set<string>) => void, pending: boolean) {
+    setIds((prev) => {
+      const next = new Set(prev);
+      if (pending) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
 
   const items = byLocale[activeLocale];
   function setItems(next: WorkExperience[]) {
@@ -67,6 +81,7 @@ export function ExperienceEditor({ initialExperience }: { initialExperience: Wor
 
   function handleAdd() {
     if (!newCompany.trim() || !newRole.trim()) return;
+    setAddingItem(true);
     void guarded(async () => {
       const item = await createExperienceAction({
         company: newCompany,
@@ -77,28 +92,31 @@ export function ExperienceEditor({ initialExperience }: { initialExperience: Wor
       setItems([...items, item]);
       setNewCompany("");
       setNewRole("");
-    });
+    }).finally(() => setAddingItem(false));
   }
 
   function handleUpdate(id: string, patch: Record<string, unknown>) {
+    withPending(id, setSavingIds, true);
     void guarded(async () => {
       const updated = await updateExperienceAction(id, patch);
       setItems(items.map((i) => (i.id === id ? updated : i)));
-    });
+    }).finally(() => withPending(id, setSavingIds, false));
   }
 
   function handleDelete(id: string) {
+    withPending(id, setDeletingIds, true);
     void guarded(async () => {
       await deleteExperienceAction(id);
       await persistOrder(
         items.filter((i) => i.id !== id),
         items,
       );
-    });
+    }).finally(() => withPending(id, setDeletingIds, false));
   }
 
   function handleTranslate(item: WorkExperience) {
     const targetLocale = OTHER_LOCALE[activeLocale];
+    withPending(item.id, setTranslatingIds, true);
     void guarded(async () => {
       const translated = await createExperienceAction({
         company: item.company,
@@ -111,7 +129,7 @@ export function ExperienceEditor({ initialExperience }: { initialExperience: Wor
         translation_group_id: item.translation_group_id,
       });
       setByLocale((prev) => ({ ...prev, [targetLocale]: [...prev[targetLocale], translated] }));
-    });
+    }).finally(() => withPending(item.id, setTranslatingIds, false));
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -155,24 +173,31 @@ export function ExperienceEditor({ initialExperience }: { initialExperience: Wor
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
           <div className="flex flex-col gap-3">
-            {items.map((item) => (
-              <div key={item.id} className="flex flex-col gap-1">
-                <ExperienceRow
-                  item={item}
-                  onUpdate={(patch) => handleUpdate(item.id, patch)}
-                  onDelete={() => handleDelete(item.id)}
-                />
-                {!translatedGroupIds.has(item.translation_group_id) && (
-                  <button
-                    type="button"
-                    onClick={() => handleTranslate(item)}
-                    className="self-start text-xs text-terracotta hover:underline"
-                  >
-                    + Add {LOCALE_LABEL[OTHER_LOCALE[activeLocale]]} translation
-                  </button>
-                )}
-              </div>
-            ))}
+            {items.map((item) => {
+              const translating = translatingIds.has(item.id);
+              return (
+                <div key={item.id} className="flex flex-col gap-1">
+                  <ExperienceRow
+                    item={item}
+                    onUpdate={(patch) => handleUpdate(item.id, patch)}
+                    onDelete={() => handleDelete(item.id)}
+                    saving={savingIds.has(item.id)}
+                    deleting={deletingIds.has(item.id)}
+                  />
+                  {!translatedGroupIds.has(item.translation_group_id) && (
+                    <button
+                      type="button"
+                      disabled={translating}
+                      onClick={() => handleTranslate(item)}
+                      className="flex items-center gap-1.5 self-start text-xs text-terracotta hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-60"
+                    >
+                      {translating && <Spinner className="h-3 w-3" />}
+                      + Add {LOCALE_LABEL[OTHER_LOCALE[activeLocale]]} translation
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </SortableContext>
       </DndContext>
@@ -183,6 +208,7 @@ export function ExperienceEditor({ initialExperience }: { initialExperience: Wor
           onChange={(e) => setNewCompany(e.target.value)}
           placeholder="Company"
           aria-label="New company"
+          disabled={addingItem}
           className="flex-1 rounded border border-border bg-paper px-2 py-1 text-sm text-ink"
         />
         <input
@@ -190,9 +216,16 @@ export function ExperienceEditor({ initialExperience }: { initialExperience: Wor
           onChange={(e) => setNewRole(e.target.value)}
           placeholder="Role"
           aria-label="New role"
+          disabled={addingItem}
           className="flex-1 rounded border border-border bg-paper px-2 py-1 text-sm text-ink"
         />
-        <button type="button" onClick={handleAdd} className="text-terracotta hover:underline">
+        <button
+          type="button"
+          disabled={addingItem}
+          onClick={handleAdd}
+          className="flex items-center gap-1.5 text-terracotta hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-60"
+        >
+          {addingItem && <Spinner className="h-3.5 w-3.5" />}
           + Add
         </button>
       </div>

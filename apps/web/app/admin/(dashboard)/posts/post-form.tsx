@@ -1,10 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import { slugify } from "@/lib/slugify";
 import { locales, type Locale } from "@/i18n/locales";
+import { Spinner } from "@/components/spinner";
 
 const LOCALE_LABEL: Record<Locale, string> = { en: "English", ro: "Română" };
+
+// useFormStatus only sees the nearest enclosing <form>, so this has to be
+// a child of it rather than inlined in PostForm itself (which renders that
+// form element).
+function SubmitButton({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="flex items-center gap-2 self-start rounded bg-terracotta px-4 py-2 font-sans text-paper-raised transition-colors hover:bg-terracotta-hover disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {pending && <Spinner className="h-4 w-4" />}
+      {label}
+    </button>
+  );
+}
 
 type PostFormValues = {
   title: string;
@@ -115,12 +134,7 @@ export function PostForm({
         Pinned
       </label>
 
-      <button
-        type="submit"
-        className="self-start rounded bg-terracotta px-4 py-2 font-sans text-paper-raised transition-colors hover:bg-terracotta-hover"
-      >
-        {submitLabel}
-      </button>
+      <SubmitButton label={submitLabel} />
     </form>
   );
 }

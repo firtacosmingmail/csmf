@@ -9,7 +9,7 @@ import {
   highlightBlocksAction,
   uploadImageAction,
   setPreviewImageAction,
-} from "@/app/admin/posts/[id]/edit/block-actions";
+} from "@/app/admin/(dashboard)/posts/[id]/edit/block-actions";
 import type { PostBlock } from "@/lib/api/blocks";
 
 // RichTextBlock wraps Tiptap/ProseMirror, which needs real browser APIs
@@ -21,7 +21,7 @@ vi.mock("./rich-text-block", () => ({
   ),
 }));
 
-vi.mock("@/app/admin/posts/[id]/edit/block-actions", () => ({
+vi.mock("@/app/admin/(dashboard)/posts/[id]/edit/block-actions", () => ({
   createBlockAction: vi.fn(),
   updateBlockAction: vi.fn(),
   deleteBlockAction: vi.fn(),

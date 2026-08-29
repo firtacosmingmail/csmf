@@ -3,6 +3,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { WorkExperience } from "@/lib/api/work-experience";
+import { Spinner } from "@/components/spinner";
 
 const fieldClass = "rounded border border-border bg-paper px-2 py-1 text-sm text-ink";
 
@@ -18,13 +19,18 @@ export function ExperienceRow({
   item,
   onUpdate,
   onDelete,
+  saving = false,
+  deleting = false,
 }: {
   item: WorkExperience;
   onUpdate: (patch: ExperiencePatch) => void;
   onDelete: () => void;
+  saving?: boolean;
+  deleting?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const fieldsDisabled = saving || deleting;
 
   return (
     <div ref={setNodeRef} style={style} className="flex gap-2 rounded border border-border bg-paper-raised p-3">
@@ -38,11 +44,12 @@ export function ExperienceRow({
         ⠿
       </button>
       <div className="flex flex-1 flex-col gap-2">
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <input
             defaultValue={item.company}
             aria-label="Company"
             placeholder="Company"
+            disabled={fieldsDisabled}
             onBlur={(e) => {
               if (e.target.value !== item.company) onUpdate({ company: e.target.value });
             }}
@@ -52,17 +59,20 @@ export function ExperienceRow({
             defaultValue={item.role}
             aria-label="Role"
             placeholder="Role"
+            disabled={fieldsDisabled}
             onBlur={(e) => {
               if (e.target.value !== item.role) onUpdate({ role: e.target.value });
             }}
             className={`flex-1 ${fieldClass}`}
           />
+          {saving && <Spinner className="h-3.5 w-3.5 shrink-0 text-ink-muted" />}
         </div>
         <textarea
           defaultValue={item.description ?? ""}
           aria-label="Description"
           placeholder="Description"
           rows={2}
+          disabled={fieldsDisabled}
           onBlur={(e) => {
             if (e.target.value !== (item.description ?? "")) onUpdate({ description: e.target.value });
           }}
@@ -74,6 +84,7 @@ export function ExperienceRow({
             <input
               type="date"
               defaultValue={item.start_date ?? ""}
+              disabled={fieldsDisabled}
               onBlur={(e) => {
                 if (e.target.value !== (item.start_date ?? "")) onUpdate({ start_date: e.target.value || null });
               }}
@@ -85,6 +96,7 @@ export function ExperienceRow({
             <input
               type="date"
               defaultValue={item.end_date ?? ""}
+              disabled={fieldsDisabled}
               onBlur={(e) => {
                 if (e.target.value !== (item.end_date ?? "")) onUpdate({ end_date: e.target.value || null });
               }}
@@ -93,8 +105,14 @@ export function ExperienceRow({
           </label>
         </div>
       </div>
-      <button type="button" onClick={onDelete} aria-label="Delete" className="shrink-0 text-terracotta hover:underline">
-        ×
+      <button
+        type="button"
+        onClick={onDelete}
+        disabled={fieldsDisabled}
+        aria-label="Delete"
+        className="flex h-fit shrink-0 items-center text-terracotta hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-60"
+      >
+        {deleting ? <Spinner className="h-3.5 w-3.5" /> : "×"}
       </button>
     </div>
   );

@@ -15,7 +15,7 @@ import {
   highlightBlocksAction,
   uploadImageAction,
   setPreviewImageAction,
-} from "@/app/admin/posts/[id]/edit/block-actions";
+} from "@/app/admin/(dashboard)/posts/[id]/edit/block-actions";
 import type { PostBlock } from "@/lib/api/blocks";
 
 function withNormalizedOrder(list: PostBlock[]): PostBlock[] {

@@ -5,7 +5,6 @@ import type { Locale } from "@/i18n/locales";
 import { PostForm } from "../../post-form";
 import { updatePostAction } from "../../actions";
 import { BlockEditor } from "@/components/block-editor/block-editor";
-import { AdminNav } from "@/components/admin-nav";
 
 export default async function EditPostPage({
   params,
@@ -27,7 +26,6 @@ export default async function EditPostPage({
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-10 px-6 py-12">
-      <AdminNav />
       <div className="flex w-full max-w-xl flex-col gap-6">
         <h1 className="font-serif text-3xl text-ink">Edit post</h1>
         <PostForm action={updatePostAction.bind(null, post.id)} defaultValues={post} submitLabel="Save" />

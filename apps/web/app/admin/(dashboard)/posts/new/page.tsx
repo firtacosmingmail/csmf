@@ -4,7 +4,6 @@ import { getPostById } from "@/lib/api/posts";
 import { isLocale, type Locale } from "@/i18n/locales";
 import { PostForm } from "../post-form";
 import { createPostAction } from "../actions";
-import { AdminNav } from "@/components/admin-nav";
 
 export default async function NewPostPage({
   searchParams,
@@ -16,7 +15,6 @@ export default async function NewPostPage({
   if (!translationOf) {
     return (
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 px-6 py-12">
-        <AdminNav />
         <h1 className="font-serif text-3xl text-ink">New post</h1>
         <PostForm action={createPostAction} submitLabel="Create" translation={{}} />
       </main>
@@ -33,7 +31,6 @@ export default async function NewPostPage({
 
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 px-6 py-12">
-      <AdminNav />
       <h1 className="font-serif text-3xl text-ink">Translate &ldquo;{source.title}&rdquo;</h1>
       <PostForm
         action={createPostAction}
