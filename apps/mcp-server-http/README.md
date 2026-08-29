@@ -119,6 +119,18 @@ Connectors → "Add custom connector", using the same URL and bearer token.
 more often than the stdio config shape documented in
 `apps/mcp-server/README.md`.)
 
+## Uploading a local image through this deployment
+
+`upload_image`'s `filePath` option resolves on whatever machine runs the
+MCP server — here, that's a Vercel container with no access to the
+*caller's* filesystem, so a local path always fails against this
+deployment (it only works with the stdio server in `apps/mcp-server`,
+which runs on the same machine as the caller). To upload a local file
+through this HTTP server, have the client read the file itself and pass
+`fileData` (its contents, base64-encoded) instead of `filePath` — the
+bytes travel in the request body, so no shared filesystem is needed.
+`imageUrl` remains the option for anything already hosted elsewhere.
+
 ## Notes for future changes
 
 - Tool logic, the API client, and auth all live in `@csmf/mcp-server` —

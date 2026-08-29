@@ -264,6 +264,22 @@ export class ApiClient {
     return this.uploadImageBytes(buffer, name, contentType ?? mimeTypeForExtension(extname(name)));
   }
 
+  // For a caller that can't give this process a filesystem path — e.g. the
+  // Vercel-deployed HTTP server has no access to the MCP *client's* local
+  // files — the client reads the file itself and sends its bytes inline
+  // instead.
+  async uploadImageFromBase64(data: string, fileName?: string, mimeType?: string): Promise<UploadedImage> {
+    let buffer: Buffer;
+    try {
+      buffer = Buffer.from(data, "base64");
+    } catch {
+      throw new Error("fileData is not valid base64");
+    }
+    if (buffer.length === 0) throw new Error("fileData decoded to an empty file");
+    const name = fileName ?? "image";
+    return this.uploadImageBytes(buffer, name, mimeType ?? mimeTypeForExtension(extname(name)));
+  }
+
   private async uploadImageBytes(bytes: Buffer, filename: string, contentType: string | undefined): Promise<UploadedImage> {
     const formData = new FormData();
     const file = new File([new Uint8Array(bytes)], filename, contentType ? { type: contentType } : {});

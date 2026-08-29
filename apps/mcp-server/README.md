@@ -105,6 +105,12 @@ machine), see [`apps/mcp-server-http`](../mcp-server-http/README.md). It
 reuses this package's tools and API client unchanged — only the transport
 and auth differ.
 
+One consequence of that: `upload_image`'s `filePath` option only works
+when the server and the caller are the same machine (true here, false for
+the Vercel deployment). Against a remote server, either use `imageUrl`, or
+have the caller read the local file itself and pass its bytes via
+`fileData` (base64) instead — see that tool's description.
+
 ## Notes for future changes
 
 - If a post/block/image/work-experience Edge Function route changes shape,
