@@ -170,7 +170,11 @@ export function ExperienceEditor({ initialExperience }: { initialExperience: Wor
       </div>
 
       {items.length === 0 && <p className="text-sm text-ink-muted">No experience yet — add your first entry below.</p>}
-      <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      {/* Explicit id avoids a hydration mismatch: without one, dnd-kit
+          derives its aria-describedby id from a module-level counter that
+          drifts between the server (shared across requests) and a fresh
+          client load. See block-editor.tsx for the same fix. */}
+      <DndContext id="work-experience" collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
           <div className="flex flex-col gap-3">
             {items.map((item) => {

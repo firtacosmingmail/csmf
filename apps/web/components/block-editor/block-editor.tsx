@@ -215,7 +215,12 @@ export function BlockEditor({
               onInsertImage={(file) => handleInsertImage(file, -1)}
             />
             {blocks.length === 0 && <p className="text-sm text-ink-muted">No content yet — use + to add a block.</p>}
-            <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            {/* dnd-kit derives its aria-describedby id from a module-level
+                counter when none is given, which drifts between the
+                server (shared across requests in the same process) and a
+                fresh client load — an explicit id sidesteps that counter
+                and keeps SSR/hydration output identical. */}
+            <DndContext id={`post-blocks-${postId}`} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
                 {blocks.map((block, index) => (
                   <div key={block.id} className="flex flex-col gap-1">
