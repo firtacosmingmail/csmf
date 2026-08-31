@@ -6,9 +6,9 @@ info:
     (`apps/supabase/functions/`). This is the only path the web app (and any
     other client) uses to read/write the database — RLS is still the real
     enforcement layer, but every request goes through a function, not
-    PostgREST directly. Auth is the one exception: Supabase Auth is called
-    directly from the web app (see `apps/web/lib/supabase/`), not wrapped by
-    this API.
+    PostgREST directly. Auth is a special case: the web app calls Supabase
+    Auth directly (see `apps/web/lib/supabase/`), while non-browser clients
+    get a session from `POST /auth`, a thin proxy over the same service.
 
     Keep this file in sync with `apps/supabase/functions/`: whenever a
     function route is added, removed, or changed, update this spec in the
@@ -49,6 +49,15 @@ tags:
       (`apps/supabase/functions/newsletter/`). v1 is capture-only — no
       admin routes yet, and no send-on-publish (that needs an email
       provider, still undecided).
+  - name: auth
+    description: >
+      The `auth` Edge Function (`apps/supabase/functions/auth/`) — a thin
+      proxy in front of Supabase Auth (GoTrue) that issues the admin
+      session token every other route accepts as `bearerAuth`. It exists so
+      a non-browser client (the `csmf-api` skill, a script, CI) needs only
+      the admin email/password, not the project's anon key: the function
+      supplies that from its own environment. The web app still calls
+      Supabase Auth directly via `@supabase/ssr` and does not use this.
   - name: comments
     description: >
       The `comments` Edge Function (`apps/supabase/functions/comments/`) —
@@ -1129,6 +1138,112 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /auth:
+    post:
+      tags: [auth]
+      summary: Sign in and get a session token
+      description: >
+        Exchanges the admin account's email/password for a Supabase session.
+        The returned `access_token` is what other routes expect as
+        `Authorization: Bearer <token>` — it is an ordinary user session, so
+        RLS constrains it exactly as it constrains the `/admin` UI. No
+        `apikey` header is required: the function holds `SUPABASE_ANON_KEY`
+        server-side. Tokens are short-lived (`expires_in`, typically one
+        hour); use `POST /auth/refresh` rather than re-sending the password.
+      operationId: signIn
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              additionalProperties: false
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "400":
+          description: Malformed body (missing/invalid email or password, unknown fields)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Rate limited by Supabase Auth
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: Supabase Auth was unreachable or returned no session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Exchange a refresh token for a new session
+      description: >
+        Lets a long-running client keep a valid `access_token` without
+        holding the password. The refresh token rotates — use the one from
+        this response for the next refresh.
+      operationId: refreshSession
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              additionalProperties: false
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        "200":
+          description: Refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "400":
+          description: Malformed body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Refresh token expired or revoked — sign in again
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: Supabase Auth was unreachable or returned no session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /hello:
     get:
       tags: [hello]
@@ -1191,6 +1306,28 @@ components:
         End user's session access token. Forwarded by the shared client so
         RLS evaluates as that caller instead of the function's own role.
   schemas:
+    Session:
+      type: object
+      description: >
+        The subset of Supabase Auth's token response this API echoes back —
+        no user object or metadata, since the endpoint's only job is issuing
+        a token.
+      properties:
+        access_token:
+          type: string
+          description: "Send as the `Authorization: Bearer <access_token>` header."
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          example: bearer
+        expires_in:
+          type: integer
+          description: Seconds until the access token expires.
+          example: 3600
+        expires_at:
+          type: integer
+          description: Unix epoch seconds at which the access token expires.
     PostSummary:
       type: object
       properties:

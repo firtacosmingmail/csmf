@@ -476,3 +476,12 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/newsletter/deno.json"
 entrypoint = "./functions/newsletter/index.ts"
+
+# Issues the admin session token non-browser clients (the csmf-api skill,
+# scripts, CI) attach to every other function. verify_jwt = false by
+# necessity: this is where a caller goes to *get* a JWT.
+[functions.auth]
+enabled = true
+verify_jwt = false
+import_map = "./functions/auth/deno.json"
+entrypoint = "./functions/auth/index.ts"
