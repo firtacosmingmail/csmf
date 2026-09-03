@@ -22,13 +22,21 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 
 async function grant(grantType: "password" | "refresh_token", body: Record<string, string>) {
-  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=${grantType}`, {
-    method: "POST",
-    headers: { apikey: SUPABASE_ANON_KEY!, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const parsed = await res.json().catch(() => ({}));
-  return { ok: res.ok, status: res.status, body: parsed };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=${grantType}`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_ANON_KEY!, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const parsed = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, body: parsed };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 502,
+      body: { message: err instanceof Error ? err.message : String(err) },
+    };
+  }
 }
 
 // POST /auth — email + password in, session out. Returns 401 for bad
