@@ -7,7 +7,7 @@
 // raw JSON bodies. Auth is handled for you — sign in once, the session is
 // cached on disk and refreshed automatically.
 //
-// Zero dependencies, Node 18+ (built-in fetch/FormData/File).
+// Zero dependencies, Node 22+ (built-in fetch/FormData/File).
 // Run `node csmf.mjs help` for the command list.
 
 import { readFile, writeFile, mkdir, chmod } from "node:fs/promises";
